@@ -5,9 +5,14 @@ vars:
   VERSION: 1.0.0
   XPKGS: [ 'awg-appdev' ]
   CHARTS: [ 'awg-appdev-init', 'awg-appdev-conf' ]
-  REPOSITORY: awgappdevops.azurecr.io
+  REPOSITORY: awgappdev.azurecr.io
 
 tasks:
+
+  # logs into the ACR repository
+  login-acr:
+    cmds:
+      - az acr login --name {{ .REPOSITORY }}
 
   # reusable task which builds a Crossplane package by name given by the XPKG variable
   build-xpkg:
@@ -38,6 +43,7 @@ tasks:
   publish-xpkg:
     run: when_changed
     deps:
+      - task: login-acr
       - task: build-xpkg
         vars:
           XPKG: '{{ .XPKG }}'
@@ -76,6 +82,7 @@ tasks:
   # builds all the charts
   build-charts:
     deps:
+      - task: login-acr
       - for: { var: CHARTS }
         task: build-chart
         vars:
