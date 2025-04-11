@@ -3,14 +3,19 @@ version: '3'
 vars:
   DISTDIR: ./dist
   VERSION: 1.0.0
+  XPKGS: [ 'awg-appdev' ]
+  CHARTS: [ 'awg-appdev-init' ]
+  REPOSITORY: awgappdevops.azurecr.io
 
 tasks:
 
   # reusable task which builds a Crossplane package by name given by the XPKG variable
-  xpkg:
+  build-xpkg:
+    run: when_changed
     requires:
       vars:
         - XPKG
+        - VERSION
     sources:
      - 'xpkg/{{ .XPKG }}/crossplane.yaml'
     generates:
@@ -21,17 +26,39 @@ tasks:
       - mkdir -p {{ .DISTDIR }}
       - crossplane xpkg build -o {{ .DISTDIR }}/{{ .XPKG }}-{{ .VERSION }}.xpkg -f xpkg/{{ .XPKG }}
 
-  # generates all the expected XPKG items
-  xpkgs:
+  # builds all the xpkgs
+  build-xpkgs:
     deps:
-      - for:
-          - awg-appenv-init
-        task: xpkg
+      - for: { var: XPKGS }
+        task: build-xpkg
+        vars:
+          XPKG: '{{ .ITEM }}'
+
+  # reusable task which publishes a Crossplane package by name given by the XPKG variable
+  publish-xpkg:
+    run: when_changed
+    deps:
+      - task: build-xpkg
+        vars:
+          XPKG: '{{ .XPKG }}'
+    requires:
+      vars:
+        - XPKG
+        - VERSION
+    cmds:
+      - crossplane xpkg push '{{ .REPOSITORY }}/xpkgs/{{ .XPKG }}:{{ .VERSION }}' -f '{{ .DISTDIR }}/{{ .XPKG }}-{{ .VERSION }}.xpkg'
+
+  # publishes all the xpkgs
+  publish-xpkgs:
+    deps:
+      - for: { var: XPKGS }
+        task: publish-xpkg
         vars:
           XPKG: '{{ .ITEM }}'
   
   # reusable task which builds a Helm chart by a name given by the CHART variable
-  chart:
+  build-chart:
+    run: when_changed
     requires:
       vars:
         - CHART
@@ -46,16 +73,47 @@ tasks:
       - mkdir -p {{ .DISTDIR }}
       - helm package charts/{{ .CHART }} -d {{ .DISTDIR }} --app-version {{ .VERSION }} --version {{ .VERSION }}
 
-  # generates all the expected Chart items
-  charts:
+  # builds all the charts
+  build-charts:
     deps:
-      - for:
-          - awg-appenv-init
-        task: chart
+      - for: { var: CHARTS }
+        task: build-chart
+        vars:
+          CHART: '{{ .ITEM }}'
+  
+  # reusable task which publishes a Helm chart by a name given by the CHART variable
+  publish-chart:
+    run: when_changed
+    deps:
+      - task: build-chart
+        vars:
+          CHART: '{{ .CHART }}'
+    requires:
+      vars:
+        - CHART
+        - VERSION
+    cmds:
+      - helm push '{{ .DISTDIR }}/{{ .CHART }}-{{ .VERSION }}.tgz' 'oci://{{ .REPOSITORY }}/charts'
+
+  # publishes all the charts
+  publish-charts:
+    deps:
+      - for: { var: CHARTS }
+        task: publish-chart
         vars:
           CHART: '{{ .ITEM }}'
 
+  build:
+    deps:
+      - build-xpkgs
+      - build-charts
+
+  publish:
+    deps:
+      - publish-xpkgs
+      - publish-charts
+
   default:
     deps:
-      - xpkgs
-      - charts
+      - build
+  

@@ -1,9 +1,9 @@
-apiVersion: meta.pkg.crossplane.io/v1alpha1
+apiVersion: pkg.crossplane.io/v1
 kind: Configuration
 metadata:
-  name: {{ include "awg-app-init.fullname" . }}
+  name: {{ include "awg-appdev-init.fullname" . }}
   labels:
-    {{- include "awg-app-init.labels" . | nindent 4 }}
+    {{- include "awg-appdev-init.labels" . | nindent 4 }}
 spec:
   dependsOn:
     - apiVersion: pkg.crossplane.io/v1
