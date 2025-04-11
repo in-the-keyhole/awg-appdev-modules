@@ -1,0 +1,61 @@
+version: '3'
+
+vars:
+  DISTDIR: ./dist
+  VERSION: 1.0.0
+
+tasks:
+
+  # reusable task which builds a Crossplane package by name given by the XPKG variable
+  xpkg:
+    requires:
+      vars:
+        - XPKG
+    sources:
+     - 'xpkg/{{ .XPKG }}/crossplane.yaml'
+    generates:
+      - '{{ .DISTDIR }}/{{ .XPKG }}-{{ .VERSION }}.xpkg'
+    preconditions:
+      - test -f 'xpkg/{{ .XPKG }}/crossplane.yaml'
+    cmds:
+      - mkdir -p {{ .DISTDIR }}
+      - crossplane xpkg build -o {{ .DISTDIR }}/{{ .XPKG }}-{{ .VERSION }}.xpkg -f xpkg/{{ .XPKG }}
+
+  # generates all the expected XPKG items
+  xpkgs:
+    deps:
+      - for:
+          - awg-appenv-init
+        task: xpkg
+        vars:
+          XPKG: '{{ .ITEM }}'
+  
+  # reusable task which builds a Helm chart by a name given by the CHART variable
+  chart:
+    requires:
+      vars:
+        - CHART
+        - VERSION
+    sources:
+      - charts/{{ .CHART }}/**/*/yaml
+    generates:
+      - '{{ .DISTDIR }}/{{ .CHART }}-{{ .VERSION }}.tgz'
+    preconditions:
+      - test -f 'charts/{{ .CHART }}/Chart.yaml'
+    cmds:
+      - mkdir -p {{ .DISTDIR }}
+      - helm package charts/{{ .CHART }} -d {{ .DISTDIR }} --app-version {{ .VERSION }} --version {{ .VERSION }}
+
+  # generates all the expected Chart items
+  charts:
+    deps:
+      - for:
+          - awg-appenv-init
+        task: chart
+        vars:
+          CHART: '{{ .ITEM }}'
+
+  default:
+    deps:
+      - xpkgs
+      - charts
