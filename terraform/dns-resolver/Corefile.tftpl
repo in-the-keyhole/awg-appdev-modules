@@ -1,0 +1,9 @@
+%{ for zone, addr in rules ~}
+${ zone } {
+  bind eth0
+  forward . ${ join(" ", addr) }
+  log
+  errors
+}
+
+%{ endfor ~}
