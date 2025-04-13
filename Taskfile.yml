@@ -2,17 +2,17 @@ version: '3'
 
 vars:
   DISTDIR: ./dist
-  VERSION: 1.0.0
+  VERSION: 0.0.1
   XPKGS: [ 'awg-appdev' ]
   CHARTS: [ 'awg-appdev-init', 'awg-appdev-conf' ]
-  REPOSITORY: awgappdev.azurecr.io
+  REPOSITORY: awgappdevlabs.azurecr.io
 
 tasks:
 
   # logs into the ACR repository
   login-acr:
     cmds:
-      - az acr login --name {{ .REPOSITORY }}
+      - az acr login -n {{ .REPOSITORY }}
 
   # reusable task which builds a Crossplane package by name given by the XPKG variable
   build-xpkg:
