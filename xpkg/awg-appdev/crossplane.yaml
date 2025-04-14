@@ -3,6 +3,7 @@ kind: Configuration
 metadata:
   name: awg-appdev
 spec:
+  skipDependencyResolution: true
   dependsOn:
     - apiVersion: pkg.crossplane.io/v1
       kind: Provider
@@ -38,10 +39,6 @@ spec:
       version: ">=v1"
     - apiVersion: pkg.crossplane.io/v1
       kind: Provider
-      package: "xpkg.upbound.io/upbound/provider-azure-databricks"
-      version: ">=v1"
-    - apiVersion: pkg.crossplane.io/v1
-      kind: Provider
       package: "xpkg.upbound.io/upbound/provider-azure-dbformysql"
       version: ">=v1"
     - apiVersion: pkg.crossplane.io/v1
@@ -66,19 +63,11 @@ spec:
       version: ">=v1"
     - apiVersion: pkg.crossplane.io/v1
       kind: Provider
-      package: "xpkg.upbound.io/upbound/provider-azure-maintenance"
-      version: ">=v1"
-    - apiVersion: pkg.crossplane.io/v1
-      kind: Provider
       package: "xpkg.upbound.io/upbound/provider-azure-network"
       version: ">=v1"
     - apiVersion: pkg.crossplane.io/v1
       kind: Provider
       package: "xpkg.upbound.io/upbound/provider-azure-resources"
-      version: ">=v1"
-    - apiVersion: pkg.crossplane.io/v1
-      kind: Provider
-      package: "xpkg.upbound.io/upbound/provider-azure-search"
       version: ">=v1"
     - apiVersion: pkg.crossplane.io/v1
       kind: Provider

@@ -1,0 +1,21 @@
+apiVersion: helm.crossplane.io/v1beta1
+kind: Release
+metadata:
+  name: awg-appdev-conf
+  labels:
+    {{- include "awg-appdev-init.labels" . | nindent 4 }}
+  annotations:
+    crossplane.io/external-name: awg-appdev-conf
+spec:
+  providerConfigRef:
+    name: default
+  forProvider:
+    namespace: {{ .Release.Namespace }}
+    chart:
+      repository: oci://{{ .Values.repoHost }}/charts
+      name: awg-appdev-conf
+      version: {{ .Chart.Version | quote }}
+    set:
+    - name: repoHost
+      value: {{ .Values.repoHost | quote }}
+    wait: true

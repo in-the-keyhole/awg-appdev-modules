@@ -1,0 +1,60 @@
+repoHost:
+
+# set of crossplane providers to install by default
+crossplane:
+  providers:
+  - name: upbound-provider-kubernetes
+    package: xpkg.upbound.io/upbound/provider-kubernetes:v0.16.0
+  - name: upbound-provider-helm
+    package: xpkg.upbound.io/upbound/provider-helm:v0.20.4
+  - name: upbound-provider-family-azure
+    package: xpkg.upbound.io/upbound/provider-family-azure:v1.11.3
+    runtimeConfigRef: upbound-provider-azure
+  - name: upbound-provider-azure-storage
+    package: xpkg.upbound.io/upbound/provider-azure-storage:v1.11.3
+    runtimeConfigRef: upbound-provider-azure
+  - name: upbound-provider-azure-storage
+    package: xpkg.upbound.io/upbound/provider-azure-managedidentity:v1.11.3
+    runtimeConfigRef: upbound-provider-azure
+  - name: upbound-provider-azure-storage
+    package: xpkg.upbound.io/upbound/provider-azure-sql:v1.11.3
+    runtimeConfigRef: upbound-provider-azure
+  - name: upbound-provider-azure-storage
+    package: xpkg.upbound.io/upbound/provider-azure-compute:v1.11.3
+    runtimeConfigRef: upbound-provider-azure
+  - name: upbound-provider-azure-storage
+    package: xpkg.upbound.io/upbound/provider-azure-cosmosdb:v1.11.3
+    runtimeConfigRef: upbound-provider-azure
+  - name: upbound-provider-azure-storage
+    package: xpkg.upbound.io/upbound/provider-azure-dbformysql:v1.11.3
+    runtimeConfigRef: upbound-provider-azure
+  - name: upbound-provider-azure-storage
+    package: xpkg.upbound.io/upbound/provider-azure-dbforpostgresql:vv1.11.3
+    runtimeConfigRef: upbound-provider-azure
+  - name: upbound-provider-azure-storage
+    package: xpkg.upbound.io/upbound/provider-azure-eventgrid:v1.11.3
+    runtimeConfigRef: upbound-provider-azure
+  - name: upbound-provider-azure-storage
+    package: xpkg.upbound.io/upbound/provider-azure-insights:v1.11.3
+    runtimeConfigRef: upbound-provider-azure
+  - name: upbound-provider-azure-storage
+    package: xpkg.upbound.io/upbound/provider-azure-keyvault:v1.11.3
+    runtimeConfigRef: upbound-provider-azure
+  - name: upbound-provider-azure-storage
+    package: xpkg.upbound.io/upbound/provider-azure-logic:v1.11.3
+    runtimeConfigRef: upbound-provider-azure
+  - name: upbound-provider-azure-storage
+    package: xpkg.upbound.io/upbound/provider-azure-network:v1.11.3
+    runtimeConfigRef: upbound-provider-azure
+  - name: upbound-provider-azure-storage
+    package: xpkg.upbound.io/upbound/provider-azure-resources:v1.11.3
+    runtimeConfigRef: upbound-provider-azure
+  - name: upbound-provider-azure-storage
+    package: xpkg.upbound.io/upbound/provider-azure-servicebus:v1.11.3
+    runtimeConfigRef: upbound-provider-azure
+  - name: upbound-provider-azure-storage
+    package: xpkg.upbound.io/upbound/provider-azure-signalrservice:v1.11.3
+    runtimeConfigRef: upbound-provider-azure
+  - name: upbound-provider-azure-storage
+    package: xpkg.upbound.io/upbound/provider-azure-web:v1.11.3
+    runtimeConfigRef: upbound-provider-azure

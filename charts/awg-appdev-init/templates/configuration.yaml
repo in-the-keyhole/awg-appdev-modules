@@ -1,9 +1,0 @@
-apiVersion: pkg.crossplane.io/v1
-kind: Configuration
-metadata:
-  name: {{ include "awg-appdev-init.fullname" . }}
-  labels:
-    {{- include "awg-appdev-init.labels" . | nindent 4 }}
-spec:
-    package: "{{ .Values.repository }}/xpkgs/awg-appdev:{{ .Chart.AppVersion }}"
-  

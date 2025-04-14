@@ -33,29 +33,7 @@ variable rules {
   }
 }
 
-resource azurerm_network_interface dns_resolver {
-  count = length(var.addresses)
-  
-  name = "${var.name}-dns-resolver-${count.index}"
-  tags = var.tags
-  resource_group_name = var.resource_group.name
-  location = var.location
-  
-  dns_servers = [ "168.63.129.16" ]
-
-  ip_configuration {
-    name = "ipconfig0"
-    subnet_id = var.subnet.id
-    private_ip_address_allocation = "Static"
-    private_ip_address = var.addresses[count.index]
-  }
-
-
-  lifecycle {
-    ignore_changes = [tags]
-  }
-}
-
+# create NSG for interfaces
 resource azurerm_network_security_group dns_resolver {
   name = "${var.name}-dns-resolver"
   tags = var.tags
@@ -77,6 +55,42 @@ resource azurerm_network_security_group dns_resolver {
   lifecycle {
     ignore_changes = [tags]
     create_before_destroy = true
+  }
+}
+
+# create availability set to link resolvers together
+resource azurerm_availability_set dns_resolver {
+  name = "${var.name}-dns-resolver"
+  tags = var.tags
+  resource_group_name = var.resource_group.name
+  location = var.location
+  
+  lifecycle {
+    ignore_changes = [tags]
+    create_before_destroy = true
+  }
+}
+
+resource azurerm_network_interface dns_resolver {
+  count = length(var.addresses)
+  
+  name = "${var.name}-dns-resolver-${count.index}"
+  tags = var.tags
+  resource_group_name = var.resource_group.name
+  location = var.location
+  
+  dns_servers = [ "168.63.129.16" ]
+
+  ip_configuration {
+    name = "ipconfig0"
+    subnet_id = var.subnet.id
+    private_ip_address_allocation = "Static"
+    private_ip_address = var.addresses[count.index]
+  }
+
+
+  lifecycle {
+    ignore_changes = [tags]
   }
 }
 
@@ -172,6 +186,7 @@ resource azurerm_linux_virtual_machine dns_resolver {
   computer_name  = "${var.name}-dns-resolver-${count.index}"
   admin_username = "sysadmin"
   admin_password = random_password.password.result
+  availability_set_id = azurerm_availability_set.dns_resolver.id
   network_interface_ids = [azurerm_network_interface.dns_resolver[count.index].id]
   disable_password_authentication = false
   secure_boot_enabled = true
