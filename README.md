@@ -9,5 +9,5 @@ This repository contains reusable artifacts incorporated into the various AWG Ap
   + awg-appdev-init: Installed immediately after Crossplane to install any resources that depend on Crossplane. Schedules the install of `awg-appdev-conf` using the Crossplane Helm Provider.
   + awg-appdev-conf: Configures any remaining elements of the cluster that must occur after package installs initiated by init.
 + Crossplane Configuration Packages:
-  + awg-appdev: Contains Crossplane Modules that form the basis of the AWG Application Environment. [xpkgs/awg-appdev/README.md]
+  + awg-appdev: Contains Crossplane Modules that form the basis of the AWG Application Environment. [README](xpkgs/awg-appdev/README.md)
  
