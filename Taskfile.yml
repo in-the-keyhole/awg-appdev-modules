@@ -2,9 +2,9 @@ version: '3'
 
 vars:
   DISTDIR: ./dist
-  VERSION: 0.0.19
+  VERSION: 0.0.122
   XPKGS: [ 'awg-appdev' ]
-  CHARTS: [ 'awg-appdev-init', 'awg-appdev-conf' ]
+  CHARTS: [ 'awg-appdev-boot', 'awg-appdev-init', 'awg-appdev-conf' ]
   REPOSITORY: awgappdevlabs.azurecr.io
 
 tasks:
@@ -22,14 +22,14 @@ tasks:
         - XPKG
         - VERSION
     sources:
-     - 'xpkg/{{ .XPKG }}/crossplane.yaml'
+     - 'xpkg/{{ .XPKG }}/api/crossplane.yaml'
     generates:
       - '{{ .DISTDIR }}/{{ .XPKG }}-{{ .VERSION }}.xpkg'
     preconditions:
-      - test -f 'xpkg/{{ .XPKG }}/crossplane.yaml'
+      - test -f 'xpkg/{{ .XPKG }}/api/crossplane.yaml'
     cmds:
       - mkdir -p {{ .DISTDIR }}
-      - crossplane xpkg build -o {{ .DISTDIR }}/{{ .XPKG }}-{{ .VERSION }}.xpkg -f xpkg/{{ .XPKG }}
+      - crossplane xpkg build -o {{ .DISTDIR }}/{{ .XPKG }}-{{ .VERSION }}.xpkg -f xpkg/{{ .XPKG }}/api
 
   # builds all the xpkgs
   build-xpkgs:

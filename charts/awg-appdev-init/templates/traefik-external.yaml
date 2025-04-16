@@ -1,0 +1,51 @@
+apiVersion: helm.crossplane.io/v1beta1
+kind: Release
+metadata:
+  name: {{ include "awg-appdev-init.fullname" . }}-traefik-external
+  labels:
+    {{- include "awg-appdev-init.labels" . | nindent 4 }}
+  annotations:
+    crossplane.io/external-name: traefik-external
+spec:
+  reclaimPolicy: Delete
+  providerConfigRef:
+    name: default
+  forProvider:
+    namespace: traefik
+    chart:
+      repository: https://traefik.github.io/charts
+      name: traefik
+      version: 35.0.0
+    values:
+      providers:
+        kubernetesIngress:
+          ingressClass: traefik-external
+          publishedService:
+            enabled: true
+      ingressClass:
+        enabled: true
+        isDefaultClass: false
+        name: traefik-external
+      service:
+        type: LoadBalancer
+      autoscaling:
+        enabled: true
+        minReplicas: 1
+        maxReplicas: 3
+        metrics:
+        - type: Resource
+          resource:
+            name: cpu
+            target:
+              type: Utilization
+              averageUtilization: 75
+        - type: Resource
+          resource:
+            name: memory
+            target:
+              type: Utilization
+              averageUtilization: 75
+      logs:
+        access:
+          bufferingSize: 128
+          enabled: true

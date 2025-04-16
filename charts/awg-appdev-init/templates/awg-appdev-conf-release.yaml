@@ -1,12 +1,13 @@
 apiVersion: helm.crossplane.io/v1beta1
 kind: Release
 metadata:
-  name: awg-appdev-conf
+  name: {{ include "awg-appdev-init.fullname" . }}-conf
   labels:
     {{- include "awg-appdev-init.labels" . | nindent 4 }}
   annotations:
     crossplane.io/external-name: awg-appdev-conf
 spec:
+  reclaimPolicy: Delete
   providerConfigRef:
     name: default
   forProvider:

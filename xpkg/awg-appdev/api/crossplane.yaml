@@ -3,12 +3,13 @@ kind: Configuration
 metadata:
   name: awg-appdev
 spec:
-  skipDependencyResolution: true
+  crossplane:
+    version: ">=v1.18"
   dependsOn:
     - apiVersion: pkg.crossplane.io/v1
       kind: Provider
       package: "xpkg.upbound.io/upbound/provider-kubernetes"
-      version: ">=v0.16.0"
+      version: ">=v0.17.1"
     - apiVersion: pkg.crossplane.io/v1
       kind: Provider
       package: "xpkg.upbound.io/upbound/provider-helm"
@@ -16,6 +17,10 @@ spec:
     - apiVersion: pkg.crossplane.io/v1
       kind: Provider
       package: "xpkg.upbound.io/upbound/provider-family-azure"
+      version: ">=v1"
+    - apiVersion: pkg.crossplane.io/v1
+      kind: Provider
+      package: "xpkg.upbound.io/upbound/provider-azure-authorization"
       version: ">=v1"
     - apiVersion: pkg.crossplane.io/v1
       kind: Provider
@@ -81,5 +86,15 @@ spec:
       kind: Provider
       package: "xpkg.upbound.io/upbound/provider-azure-web"
       version: ">=v1"
-  crossplane:
-    version: ">=v1.19"
+    - apiVersion: pkg.crossplane.io/v1
+      kind: Function
+      package: xpkg.upbound.io/crossplane-contrib/function-go-templating
+      version: ">=v0.9"
+    - apiVersion: pkg.crossplane.io/v1
+      kind: Function
+      package: xpkg.upbound.io/crossplane-contrib/function-auto-ready
+      version: ">=v0.2"
+    - apiVersion: pkg.crossplane.io/v1
+      kind: Function
+      package: xpkg.upbound.io/crossplane-contrib/function-environment-configs
+      version: ">=v0.2.0"
