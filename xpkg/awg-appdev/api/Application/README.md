@@ -1,6 +1,6 @@
 # Application XRD
 
-`
+```
 apiVersion: appdev.awginc.com/v1alpha1
 kind: Application
 metadata:
@@ -9,7 +9,7 @@ spec:
   name: applicationname
   metadataLocation: northcentralus
   defaultResourceLocation: southcentralus
-`
+```
 
 An Application claim serves as the root of an AWG application deployment. Generally only a single Application object should exist in each Kubernetes namespace.
 
