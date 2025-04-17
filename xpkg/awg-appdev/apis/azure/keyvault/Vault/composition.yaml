@@ -68,7 +68,7 @@ spec:
 
           {{- $vaultName := $resourceName }}
           {{- if gt (len $vaultName) 24 }}
-          {{- $vaultName = printf "%s-%s" (substr 0 (sub 24 6)) $vaultName | trimSuffix "-") (sha1sum $vaultName | substr 0 5) }}
+          {{- $vaultName = printf "%s-%s" (substr 0 ((sub 24 6) | int) $vaultName | trimSuffix "-") (sha1sum $vaultName | substr 0 5) }}
           {{- end }}
           apiVersion: keyvault.azure.upbound.io/v1beta2
           kind: Vault

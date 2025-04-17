@@ -68,7 +68,7 @@ spec:
 
           {{- $accountName := $resourceName | replace "-" "" }}
           {{- if gt (len $accountName) 24 }}
-          {{- $accountName = printf "%s%s" (substr 0 (sub 24 5) $accountName) (sha1sum $accountName | substr 0 5) }}
+          {{- $accountName = printf "%s%s" (substr 0 ((sub 24 5) | int) $accountName) (sha1sum $accountName | substr 0 5) }}
           {{- end }}
           apiVersion: storage.azure.upbound.io/v1beta2
           kind: Account

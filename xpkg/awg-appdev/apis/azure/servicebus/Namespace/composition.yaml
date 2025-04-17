@@ -68,7 +68,7 @@ spec:
 
           {{- $serviceBusNamespaceName := $resourceName}}
           {{- if gt (len $serviceBusNamespaceName) 50 }}
-          {{- $serviceBusNamespaceName = printf "%s-%s" (substr 0 (sub 50 6) $serviceBusNamespaceName | trimSuffix "-") (sha1sum $serviceBusNamespaceName | substr 0 5) }}
+          {{- $serviceBusNamespaceName = printf "%s-%s" (substr 0 ((sub 50 6) | int) $serviceBusNamespaceName | trimSuffix "-") (sha1sum $serviceBusNamespaceName | substr 0 5) }}
           {{- end }}
           apiVersion: servicebus.azure.upbound.io/v1beta2
           kind: ServiceBusNamespace

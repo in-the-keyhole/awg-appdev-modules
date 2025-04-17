@@ -286,10 +286,7 @@ spec:
             forProvider:
               resourceGroupNameSelector:
                 matchControllerRef: true
-              parentIdSelector:
-                matchControllerRef: true
-                matchLabels:
-                  crossplane.io/composition-resource-name: identity
+              parentId: {{ $identity.status.atProvider.id }}
               issuer: {{ $environment.cluster.oidc_issuer_url | trim }}
               audience:
               - api://AzureADTokenExchange
@@ -309,10 +306,7 @@ spec:
             forProvider:
               resourceGroupNameSelector:
                 matchControllerRef: true
-              parentIdSelector:
-                matchControllerRef: true
-                matchLabels:
-                  crossplane.io/composition-resource-name: identity
+              parentId: {{ $identity.status.atProvider.id }}
               issuer: {{ $environment.cluster.oidc_issuer_url | trim }}
               audience:
               - api://AzureADTokenExchange
