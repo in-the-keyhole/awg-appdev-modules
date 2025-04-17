@@ -1,0 +1,93 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata: 
+  name: xapplications.appdev.awginc.com
+spec:
+  group: appdev.awginc.com
+  names:
+    kind: XApplication
+    plural: xapplications
+  claimNames:
+    kind: Application
+    plural: applications
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              name:
+                type: string
+                pattern: ^[a-z0-9](([a-z0-9\-[^\-])){1,31}[a-z0-9]$
+              tags:
+                type: object
+              metadataLocation:
+                type: string
+                enum:
+                - northcentralus
+              defaultResourceLocation:
+                type: string
+                enum:
+                - southcentralus
+            required:
+            - name
+            - metadataLocation
+            - defaultResourceLocation
+          status:
+            type: object
+            properties:
+              azure:
+                type: object
+                properties:
+                  resources:
+                    type: object
+                    properties:
+                      resourceGroup:
+                        type: object
+                        properties:
+                          id:
+                            type: "string"
+                          name:
+                            type: "string"
+                          location:
+                            type: "string"
+                          managedBy:
+                            type: "string"
+                      dnsZone:
+                        type: object
+                        properties:
+                          id:
+                            type: "string"
+                          name:
+                            type: "string"
+                          location:
+                            type: "string"
+                          managedBy:
+                            type: "string"
+                      internalDnsZone:
+                        type: object
+                        properties:
+                          id:
+                            type: "string"
+                          name:
+                            type: "string"
+                          location:
+                            type: "string"
+                          managedBy:
+                            type: "string"
+                      userAssignedIdentity:
+                        type: object
+                        properties:
+                          id:
+                            type: "string"
+                          name:
+                            type: "string"
+                          location:
+                            type: "string"
+                          managedBy:
+                            type: "string"

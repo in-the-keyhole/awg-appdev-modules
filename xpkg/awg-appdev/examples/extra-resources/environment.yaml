@@ -1,0 +1,12 @@
+apiVersion: apiextensions.crossplane.io/v1alpha1
+kind: EnvironmentConfig
+metadata:
+  name: awg-appdev
+data:
+  defaultName: "awg-appdev-dev"
+  releaseName: "1.0.0"
+  defaultTags: {}
+  dnsZoneName: "example.com"
+  internalDnsZoneName: "int.example.com"
+  vnetId: "/subscriptions/6190d2d3-f65d-4f7a-939e-ad9829c27fd5/resourceGroups/rg-awg-appdev-labs/providers/Microsoft.Network/virtualNetworks/awg-appdev-labs"
+  cluster: {}

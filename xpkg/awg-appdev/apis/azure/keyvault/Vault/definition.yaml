@@ -1,0 +1,56 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata: 
+  name: xvaults.keyvault.azure.appdev.awginc.com
+spec:
+  group: keyvault.azure.appdev.awginc.com
+  names:
+    kind: XVault
+    plural: xvaults
+  claimNames:
+    kind: Vault
+    plural: vaults
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              applicationRef:
+                type: object
+                properties:
+                  name:
+                    type: string
+              location:
+                type: string
+          status:
+            properties:
+              applicationRef:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+              azure:
+                type: object
+                properties:
+                  resources:
+                    type: object
+                    properties:
+                      keyVault:
+                        type: object
+                        properties:
+                          id:
+                            type: "string"
+                          name:
+                            type: "string"
+                          location:
+                            type: "string"
+                          managedBy:
+                            type: "string"

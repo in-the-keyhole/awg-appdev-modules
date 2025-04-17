@@ -1,0 +1,139 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: accounts.storage.azure.appdev.awginc.com
+  labels:
+    crossplane.io/xrd: xaccounts.storage.azure.appdev.awginc.com
+spec:
+  compositeTypeRef:
+    apiVersion: storage.azure.appdev.awginc.com/v1alpha1
+    kind: XAccount
+  mode: Pipeline
+  pipeline:
+  - step: env
+    functionRef:
+      name: crossplane-contrib-function-environment-configs
+    input:
+      apiVersion: environmentconfigs.fn.crossplane.io/v1beta1
+      kind: Input
+      spec:
+        environmentConfigs:
+          - type: Reference
+            ref:
+              name: awg-appdev
+  - step: render
+    functionRef:
+      name: crossplane-contrib-function-go-templating
+    input:
+      apiVersion: gotemplating.fn.crossplane.io/v1beta1
+      kind: GoTemplate
+      source: Inline
+      inline:
+        template: |
+          ---
+          {{- $environment := .context | dig "apiextensions.crossplane.io/environment" "" }}
+          {{- if not $environment }}
+          {{- fail "Could not load environment config." }}
+          {{- end }}
+          {{- $defaultName := $environment.defaultName | trim }}
+          ---
+
+          {{- $xr := getCompositeResource . }}
+          {{- $namespace := $xr.spec.claimRef.namespace }}
+          {{- $name := $xr.spec.claimRef.name }}
+          {{- $appRef := $xr.spec.applicationRef.name }}
+          {{- $hash := printf "%s-%s" $namespace $name | sha1sum | substr 0 5 }}
+          ---
+
+          apiVersion: meta.gotemplating.fn.crossplane.io/v1alpha1
+          kind: ExtraResources
+          requirements:
+            application:
+              apiVersion: appdev.awginc.com/v1alpha1
+              kind: XApplication
+              matchLabels:
+                crossplane.io/claim-namespace: {{ $namespace }}
+                crossplane.io/claim-name: {{ $appRef }}
+          ---
+
+          {{- if .extraResources }}
+          {{- $appXR := .extraResources | dig "application" "items" list | first | default dict | dig "resource" dict }}
+          {{- if not $appXR }}
+          {{- fail (printf "Could not find Application: %s/%s" $namespace $appRef) }}
+          {{- end }}
+          ---
+
+          {{- $resourceName := printf "%s-app-%s-%s" $defaultName $appXR.spec.name $hash }}
+          ---
+
+          {{- $accountName := $resourceName | replace "-" "" }}
+          {{- if gt (len $accountName) 24 }}
+          {{- $accountName = printf "%s%s" (substr 0 (sub 24 5) $accountName) (sha1sum $accountName | substr 0 5) }}
+          {{- end }}
+          apiVersion: storage.azure.upbound.io/v1beta2
+          kind: Account
+          metadata:
+            annotations:
+              {{ setResourceNameAnnotation "account" }}
+              crossplane.io/external-name: {{ $accountName }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $appRef }}
+          spec:
+            deletionPolicy: Delete
+            forProvider:
+              tags:
+                application.appdev.awginc.com-namespace: {{ $namespace }}
+                application.appdev.awginc.com-name: {{ $appRef }}
+                account.storage.azure.appdev.awginc.com-name: {{ $xr.metadata.name }}
+              resourceGroupNameSelector:
+                matchLabels:
+                  application.appdev.awginc.com/namespace: {{ $namespace }}
+                  application.appdev.awginc.com/name: {{ $appRef }}
+              location: {{ $xr.spec.location | default $appXR.spec.defaultResourceLocation }}
+              accessTier: "Hot"
+              accountKind: "StorageV2"
+              accountTier: "Standard"
+              accountReplicationType: "LRS"
+              defaultToOauthAuthentication: true
+              enableHttpsTrafficOnly: true
+              publicNetworkAccessEnabled: false
+          ---
+
+          apiVersion: storage.azure.appdev.awginc.com/v1alpha1
+          kind: XAccount
+          status:
+            applicationRef:
+              namespace: {{ $namespace }}
+              name: {{ $appRef }}
+          ---
+
+          {{- $account := getComposedResource . "account" }}
+          {{- if dig "status" "atProvider" "id" "" $account }}
+          ---
+
+          apiVersion: storage.azure.appdev.awginc.com/v1alpha1
+          kind: XAccount
+          status:
+            azure:
+              resources:
+                storageAccount:
+                  {{- with $account.status.atProvider.id }}
+                  id: {{ . }}
+                  {{- end }}
+                  {{- with $account.metadata.annotations | dig "crossplane.io/external-name" "" }}
+                  name: {{ . }}
+                  {{- end }}
+                  {{- with $account.status.atProvider.location }}
+                  location: {{ . }}
+                  {{- end }}
+                  {{- with $account.status.atProvider.managedBy }}
+                  managedBy: {{ . }}
+                  {{- end }}
+          ---
+          {{- end }}
+          {{- end }}
+          ---
+  - step: ready
+    functionRef:
+      name: crossplane-contrib-function-auto-ready

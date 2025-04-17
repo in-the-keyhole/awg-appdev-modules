@@ -1,0 +1,56 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata: 
+  name: xnamespaces.servicebus.azure.appdev.awginc.com
+spec:
+  group: servicebus.azure.appdev.awginc.com
+  names:
+    kind: XNamespace
+    plural: xnamespaces
+  claimNames:
+    kind: Namespace
+    plural: namespaces
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              applicationRef:
+                type: object
+                properties:
+                  name:
+                    type: string
+              location:
+                type: string
+          status:
+            properties:
+              applicationRef:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+              azure:
+                type: object
+                properties:
+                  resources:
+                    type: object
+                    properties:
+                      serviceBusNamespace:
+                        type: object
+                        properties:
+                          id:
+                            type: "string"
+                          name:
+                            type: "string"
+                          location:
+                            type: "string"
+                          managedBy:
+                            type: "string"

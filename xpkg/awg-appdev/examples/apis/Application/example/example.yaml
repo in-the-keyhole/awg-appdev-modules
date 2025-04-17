@@ -1,0 +1,8 @@
+apiVersion: appdev.awginc.com/v1alpha1
+kind: XApplication
+metadata:
+  name: example
+spec:
+  defaultResourceLocation: southcentralus
+  metadataLocation: northcentralus
+  name: demoapp

@@ -2,7 +2,7 @@ version: '3'
 
 vars:
   DISTDIR: ./dist
-  VERSION: 0.0.122
+  VERSION: 0.0.233
   XPKGS: [ 'awg-appdev' ]
   CHARTS: [ 'awg-appdev-boot', 'awg-appdev-init', 'awg-appdev-conf' ]
   REPOSITORY: awgappdevlabs.azurecr.io
@@ -12,24 +12,69 @@ tasks:
   # logs into the ACR repository
   login-acr:
     cmds:
-      - az acr login -n {{ .REPOSITORY }}
+    - az acr login -n {{ .REPOSITORY }}
+
+  test-xpkg-example:
+    requires:
+      vars:
+        - XPKG
+        - API
+        - EXAMPLE
+    cmds:
+    - cmd: crossplane render xpkg/{{ .XPKG }}/examples/apis/{{ .API }}/examples/{{ .EXAMPLE }}.yaml xpkg/{{ .XPKG }}/apis/{{ .API }}/composition.yaml xpkg/{{ .XPKG }}/examples/functions.yaml --extra-resources xpkg/{{ .XPKG }}/examples/{{.API }}/example --context-files="apiextensions.crossplane.io/environment"=xpkg/{{ .XPKG }}/examples/environment/awg-appdev.json --include-full-xr --include-context
+
+  test-xpkg-api:
+    requires:
+      vars:
+        - XPKG
+        - API
+    vars:
+      EXAMPLES:
+        sh: find xpkg/{{ .XPKG }}/examples/apis/{{ .API }} -name *.yaml -printf "%h\n" | cut -d'/' -f6-
+    deps:
+    - for: { var: EXAMPLES }
+      task: test-xpkg-example
+      vars:
+        XPKG: '{{ .XPKG }}'
+        API: '{{ .API }}'
+        EXAMPLE: '{{ .ITEM }}'
+
+  test-xpkg:
+    requires:
+      vars:
+      - XPKG
+    vars:
+      APIS:
+        sh: find xpkg/{{ .XPKG }}/apis -name definition.yaml -printf "%h\n" | cut -d'/' -f4-
+    deps:
+    - for: { var: APIS }
+      task: test-xpkg-api
+      vars:
+        XPKG: '{{ .XPKG }}'
+        API: '{{ .ITEM }}'
+
+  test-xpkgs:
+    deps:
+    - for: { var: XPKGS }
+      task: test-xpkg
+      vars:
+        XPKG: '{{ .ITEM }}'
 
   # reusable task which builds a Crossplane package by name given by the XPKG variable
   build-xpkg:
-    run: when_changed
     requires:
       vars:
         - XPKG
         - VERSION
     sources:
-     - 'xpkg/{{ .XPKG }}/api/crossplane.yaml'
+     - 'xpkg/{{ .XPKG }}/apis/crossplane.yaml'
     generates:
       - '{{ .DISTDIR }}/{{ .XPKG }}-{{ .VERSION }}.xpkg'
     preconditions:
-      - test -f 'xpkg/{{ .XPKG }}/api/crossplane.yaml'
+      - test -f 'xpkg/{{ .XPKG }}/apis/crossplane.yaml'
     cmds:
       - mkdir -p {{ .DISTDIR }}
-      - crossplane xpkg build -o {{ .DISTDIR }}/{{ .XPKG }}-{{ .VERSION }}.xpkg -f xpkg/{{ .XPKG }}/api
+      - crossplane xpkg build -o {{ .DISTDIR }}/{{ .XPKG }}-{{ .VERSION }}.xpkg -f xpkg/{{ .XPKG }}/apis
 
   # builds all the xpkgs
   build-xpkgs:

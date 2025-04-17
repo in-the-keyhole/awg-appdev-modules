@@ -30,28 +30,62 @@ spec:
       source: Inline
       inline:
         template: |
-          {{ $xr := getCompositeResource . }}
-          {{ $an := $xr.spec.name }}
-          {{ $ns := $xr.spec.claimRef.namespace }}
-          {{ $name := printf "awg-appdev-dev-app-%s" $an }}
-          {{ $zoneName := printf "%s.%s" $an (trim (index .context "apiextensions.crossplane.io/environment" "dnsZoneName")) }}
-          {{ $internalZoneName := printf "%s.%s" $an (trim (index .context "apiextensions.crossplane.io/environment" "internalDnsZoneName")) }}
+          ---
+          {{- $environment := .context | dig "apiextensions.crossplane.io/environment" "" }}
+          {{- if not $environment }}
+          {{- fail "Could not load environment config." }}
+          {{- end }}
+          {{- $defaultName := $environment.defaultName | trim }}
+          ---
+
+          {{- $xr := getCompositeResource . }}
+          {{- $namespace := $xr.spec.claimRef.namespace }}
+          {{- $name := $xr.spec.claimRef.name }}
+          {{- $appName := $xr.spec.name }}
+          {{- $hash := printf "%s-%s" $namespace $name | sha1sum | substr 0 5 }}
+          {{- $resourcePrefix := printf "%s-app-%s" $defaultName $appName }}
           ---
 
           apiVersion: azure.upbound.io/v1beta1
           kind: ResourceGroup
           metadata:
             annotations:
-              {{ setResourceNameAnnotation "resourcegroup" }}
-              crossplane.io/external-name: rg-{{ $name }}
+              {{ setResourceNameAnnotation "resourceGroup" }}
+              crossplane.io/external-name: rg-{{ $resourcePrefix }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
           spec:
             deletionPolicy: Delete
             forProvider:
+              tags:
+                application.appdev.awginc.com-namespace: {{ $namespace }}
+                application.appdev.awginc.com-name: {{ $name }}
               location: {{ $xr.spec.metadataLocation }}
           ---
 
-          {{ $rg := getComposedResource . "resourcegroup" }}
-          {{ if (dig "metadata" "annotations" "crossplane.io/external-name" $rg) }}
+          {{- $resourceGroup := getComposedResource . "resourceGroup" }}
+          {{- if $resourceGroup | dig "status" "atProvider" "id" "" }}
+          ---
+
+          apiVersion: appdev.awginc.com/v1alpha1
+          kind: XApplication
+          status:
+            azure:
+              resources:
+                resourceGroup:
+                  {{- with $resourceGroup.status.atProvider.id }}
+                  id: {{ . }}
+                  {{- end }}
+                  {{- with $resourceGroup.metadata.annotations | dig "crossplane.io/external-name" "" }}
+                  name: {{ . }}
+                  {{- end }}
+                  {{- with $resourceGroup.status.atProvider.location }}
+                  location: {{ . }}
+                  {{- end }}
+                  {{- with $resourceGroup.status.atProvider.managedBy }}
+                  managedBy: {{ . }}
+                  {{- end }}
           ---
 
           apiVersion: managedidentity.azure.upbound.io/v1beta1
@@ -60,59 +94,151 @@ spec:
             annotations:
               {{ setResourceNameAnnotation "identity" }}
             labels:
-              crossplane.io/composition-resource-name: identity
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
           spec:
             deletionPolicy: Delete
             forProvider:
+              name: {{ $resourcePrefix }}
+              tags:
+                application.appdev.awginc.com-namespace: {{ $namespace }}
+                application.appdev.awginc.com-name: {{ $name }}
               resourceGroupNameSelector:
                 matchControllerRef: true
-              name: {{ $name }}
               location: {{ $xr.spec.defaultResourceLocation }}
           ---
 
+          {{- $zoneName := printf "%s.%s" $appName ($environment.dnsZoneName | trim) }}
           apiVersion: network.azure.upbound.io/v1beta2
           kind: DNSZone
           metadata:
             annotations:
-              {{ setResourceNameAnnotation "dnszone" }}
+              {{ setResourceNameAnnotation "dnsZone" }}
               crossplane.io/external-name: {{ $zoneName }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
           spec:
             deletionPolicy: Delete
             forProvider:
+              tags:
+                application.appdev.awginc.com-namespace: {{ $namespace }}
+                application.appdev.awginc.com-name: {{ $name }}
               resourceGroupNameSelector:
                 matchControllerRef: true
           ---
 
+          {{- $dnsZone := getComposedResource . "dnsZone" }}
+          {{- if $dnsZone | dig "status" "atProvider" "id" "" }}
+          apiVersion: appdev.awginc.com/v1alpha1
+          kind: XApplication
+          status:
+            azure:
+              resources:
+                dnsZone:
+                  {{- with $dnsZone.status.atProvider.id }}
+                  id: {{ . }}
+                  {{- end }}
+                  {{- with $dnsZone | dig "metadata" "annotations" "crossplane.io/external-name" "" }}
+                  name: {{ . }}
+                  {{- end }}
+                  {{- with $dnsZone.status.atProvider.location }}
+                  location: {{ . }}
+                  {{- end }}
+                  {{- with $dnsZone.status.atProvider.managedBy }}
+                  managedBy: {{ . }}
+                  {{- end }}
+          ---
+          {{- end }}
+
+          {{- $internalZoneName := printf "%s.%s" $appName ($environment.internalDnsZoneName | trim) }}
           apiVersion: network.azure.upbound.io/v1beta2
           kind: PrivateDNSZone
           metadata:
             annotations:
-              {{ setResourceNameAnnotation "internaldnszone" }}
+              {{ setResourceNameAnnotation "internalDnsZone" }}
               crossplane.io/external-name: {{ $internalZoneName }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
           spec:
             deletionPolicy: Delete
             forProvider:
+              tags:
+                application.appdev.awginc.com-namespace: {{ $namespace }}
+                application.appdev.awginc.com-name: {{ $name }}
               resourceGroupNameSelector:
                 matchControllerRef: true
           ---
+
+          {{- $internalDnsZone := getComposedResource . "internalDnsZone" }}
+          {{- if $internalDnsZone | dig "status" "atProvider" "id" "" }}
+          ---
+
+          apiVersion: appdev.awginc.com/v1alpha1
+          kind: XApplication
+          status:
+            azure:
+              resources:
+                internalDnsZone:
+                  {{- with $internalDnsZone.status.atProvider.id }}
+                  id: {{ . }}
+                  {{- end }}
+                  {{- with $internalDnsZone.metadata.annotations | dig "crossplane.io/external-name" "" }}
+                  name: {{ . }}
+                  {{- end }}
+                  {{- with $internalDnsZone.status.atProvider.location }}
+                  location: {{ . }}
+                  {{- end }}
+                  {{- with $internalDnsZone.status.atProvider.managedBy }}
+                  managedBy: {{ . }}
+                  {{- end }}
+          ---
+          {{- end }}
 
           apiVersion: network.azure.upbound.io/v1beta1
           kind: PrivateDNSZoneVirtualNetworkLink
           metadata:
             annotations:
-              {{ setResourceNameAnnotation "internaldnszonelink" }}
+              {{ setResourceNameAnnotation "internalDnsZoneLink" }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
           spec:
             deletionPolicy: Delete
             forProvider:
+              tags:
+                application.appdev.awginc.com-namespace: {{ $namespace }}
+                application.appdev.awginc.com-name: {{ $name }}
               resourceGroupNameSelector:
                 matchControllerRef: true
               privateDnsZoneNameSelector:
                 matchControllerRef: true
-              virtualNetworkId: {{ trim (index .context "apiextensions.crossplane.io/environment" "vnetId") }}
+              virtualNetworkId: {{ $environment.azure.vnetId | trim }}
           ---
 
-          {{ $uai := getComposedResource . "identity" }}
-          {{ if (dig "status" "atProvider" "tenantId" $uai) }}
+          {{- $identity := getComposedResource . "identity" }}
+          {{- if $identity | dig "status" "atProvider" "id" "" }}
+          ---
+
+          apiVersion: appdev.awginc.com/v1alpha1
+          kind: XApplication
+          status:
+            azure:
+              resources:
+                userAssignedIdentity:
+                  {{- with $identity.status.atProvider.id }}
+                  id: {{ . }}
+                  {{- end }}
+                  {{- with $identity.metadata.annotations | dig "crossplane.io/external-name" "" }}
+                  name: {{ . }}
+                  {{- end }}
+                  {{- with $identity.status.atProvider.location }}
+                  location: {{ . }}
+                  {{- end }}
+                  {{- with $identity.status.atProvider.managedBy }}
+                  managedBy: {{ . }}
+                  {{- end }}
           ---
 
           apiVersion: authorization.azure.upbound.io/v1beta1
@@ -120,11 +246,15 @@ spec:
           metadata:
             annotations:
               {{ setResourceNameAnnotation "identity-role-dns-zone-contributor" }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
           spec:
+            deletionPolicy: Delete
             forProvider:
               roleDefinitionName: DNS Zone Contributor
-              scope: {{ $rg.status.atProvider.id }}
-              principalId: {{ $uai.status.atProvider.principalId }}
+              scope: {{ $resourceGroup.status.atProvider.id }}
+              principalId: {{ $identity.status.atProvider.principalId }}
           ---
 
           apiVersion: authorization.azure.upbound.io/v1beta1
@@ -132,11 +262,15 @@ spec:
           metadata:
             annotations:
               {{ setResourceNameAnnotation "identity-role-private-dns-zone-contributor" }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
           spec:
+            deletionPolicy: Delete
             forProvider:
               roleDefinitionName: Private DNS Zone Contributor
-              scope: {{ $rg.status.atProvider.id }}
-              principalId: {{ $uai.status.atProvider.principalId }}
+              scope: {{ $resourceGroup.status.atProvider.id }}
+              principalId: {{ $identity.status.atProvider.principalId }}
           ---
 
           apiVersion: managedidentity.azure.upbound.io/v1beta1
@@ -144,6 +278,9 @@ spec:
           metadata:
             annotations:
               {{ setResourceNameAnnotation "identity-external-dns-external" }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
           spec:
             deletionPolicy: Delete
             forProvider:
@@ -153,10 +290,10 @@ spec:
                 matchControllerRef: true
                 matchLabels:
                   crossplane.io/composition-resource-name: identity
-              issuer: {{ trim (index .context "apiextensions.crossplane.io/environment" "cluster" "oidc_issuer_url") }}
+              issuer: {{ $environment.cluster.oidc_issuer_url | trim }}
               audience:
               - api://AzureADTokenExchange
-              subject: {{ printf "system:serviceaccount:%s:%s-external-dns-external" $ns $xr.metadata.name }}
+              subject: {{ printf "system:serviceaccount:%s:%s-external-dns-external" $namespace $name }}
           ---
 
           apiVersion: managedidentity.azure.upbound.io/v1beta1
@@ -164,6 +301,9 @@ spec:
           metadata:
             annotations:
               {{ setResourceNameAnnotation "identity-external-dns-internal" }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
           spec:
             deletionPolicy: Delete
             forProvider:
@@ -173,10 +313,10 @@ spec:
                 matchControllerRef: true
                 matchLabels:
                   crossplane.io/composition-resource-name: identity
-              issuer: {{ trim (index .context "apiextensions.crossplane.io/environment" "cluster" "oidc_issuer_url") }}
+              issuer: {{ $environment.cluster.oidc_issuer_url | trim }}
               audience:
               - api://AzureADTokenExchange
-              subject: {{ printf "system:serviceaccount:%s:%s-external-dns-internal" $ns $xr.metadata.name }}
+              subject: {{ printf "system:serviceaccount:%s:%s-external-dns-internal" $namespace $name }}
           ---
 
           apiVersion: kubernetes.crossplane.io/v1alpha2
@@ -184,6 +324,9 @@ spec:
           metadata:
             annotations:
               {{ setResourceNameAnnotation "external-dns-cluster-role" }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
           spec:
             managementPolicies:
             - Observe
@@ -227,15 +370,15 @@ spec:
                   verbs: ["get","watch","list"]
           ---
 
-          {{ $role := getComposedResource . "external-dns-cluster-role" }}
-          ---
-
           apiVersion: helm.crossplane.io/v1beta1
           kind: Release
           metadata:
             annotations:
               {{ setResourceNameAnnotation "external-dns-external" }}
               crossplane.io/external-name: {{ $xr.metadata.name }}-external-dns-external
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
           spec:
             managementPolicies:
             - Observe
@@ -243,14 +386,14 @@ spec:
             - Update
             - Delete
             forProvider:
-              namespace: {{ $xr.spec.claimRef.namespace }}
+              namespace: {{ $namespace }}
               chart:
                 repository: https://kubernetes-sigs.github.io/external-dns/
                 name: external-dns
                 version: 1.16.1
               values:
                 logLevel: debug
-                txtOwnerId: {{ $name }}
+                txtOwnerId: {{ $appName }}
                 namespaced: true
                 sources:
                 - service
@@ -264,7 +407,7 @@ spec:
                   name: azure
                 serviceAccount:
                   annotations:
-                    azure.workload.identity/client-id: {{ $uai.status.atProvider.clientId }}
+                    azure.workload.identity/client-id: {{ $identity.status.atProvider.clientId }}
                 podLabels:
                   azure.workload.identity/use: "true"
                 secretConfiguration:
@@ -273,16 +416,17 @@ spec:
                   data:
                     azure.json: |
                       {
-                        "tenantId": "{{ $uai.status.atProvider.tenantId }}",
-                        "subscriptionId": "{{ (split "/" $rg.status.atProvider.id)._2 }}",
-                        "resourceGroup": "{{ index $rg.metadata.annotations "crossplane.io/external-name" }}",
+                        "tenantId": "{{ $identity.status.atProvider.tenantId }}",
+                        "subscriptionId": "{{ index (splitList "/" $resourceGroup.status.atProvider.id) 2 }}",
+                        "resourceGroup": "{{ $resourceGroup.metadata.annotations | dig "crossplane.io/external-name" "" }}",
                         "useWorkloadIdentityExtension": true
                       }
           ---
 
-          {{ if $role }}
-          {{ $externalDnsExternal := getComposedResource . "external-dns-external" }}
-          {{ if (dig "metadata" "annotations" "crossplane.io/external-name" $externalDnsExternal) }}
+          {{- $externalDnsClusterRole := getComposedResource . "external-dns-cluster-role" }}
+          {{- if $externalDnsClusterRole }}
+          {{- $externalDnsExternal := getComposedResource . "external-dns-external" }}
+          {{- if $externalDnsExternal | dig "metadata" "annotations" "crossplane.io/external-name" "" }}  
           ---
 
           apiVersion: kubernetes.crossplane.io/v1alpha2
@@ -290,6 +434,9 @@ spec:
           metadata:
             annotations:
               {{ setResourceNameAnnotation "external-dns-external-cluster-role-binding" }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
           spec:
             managementPolicies:
             - Observe
@@ -303,15 +450,15 @@ spec:
                 roleRef:
                   apiGroup: rbac.authorization.k8s.io
                   kind: ClusterRole
-                  name: {{ index $role.metadata.annotations "crossplane.io/external-name" }}
+                  name: {{ $externalDnsClusterRole.metadata.annotations | dig "crossplane.io/external-name" "" }}
                 subjects:
                 - kind: ServiceAccount
-                  namespace: {{ $ns }}
-                  name: {{ index $externalDnsExternal.metadata.annotations "crossplane.io/external-name" }}
+                  namespace: {{ $namespace }}
+                  name: {{ $externalDnsExternal.metadata.annotations | dig "crossplane.io/external-name" "" }}
           ---
 
-          {{ end }}
-          {{ end }}
+          {{- end }}
+          {{- end }}
           ---
 
           apiVersion: helm.crossplane.io/v1beta1
@@ -320,6 +467,9 @@ spec:
             annotations:
               {{ setResourceNameAnnotation "external-dns-internal" }}
               crossplane.io/external-name: {{ $xr.metadata.name }}-external-dns-internal
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
           spec:
             managementPolicies:
             - Observe
@@ -327,14 +477,14 @@ spec:
             - Update
             - Delete
             forProvider:
-              namespace: {{ $xr.spec.claimRef.namespace }}
+              namespace: {{ $namespace }}
               chart:
                 repository: https://kubernetes-sigs.github.io/external-dns/
                 name: external-dns
                 version: 1.16.1
               values:
                 logLevel: debug
-                txtOwnerId: {{ $name }}
+                txtOwnerId: {{ $appName }}
                 namespaced: true
                 sources:
                 - service
@@ -348,7 +498,7 @@ spec:
                   name: azure-private-dns
                 serviceAccount:
                   annotations:
-                    azure.workload.identity/client-id: {{ $uai.status.atProvider.clientId }}
+                    azure.workload.identity/client-id: {{ $identity.status.atProvider.clientId }}
                 podLabels:
                   azure.workload.identity/use: "true"
                 secretConfiguration:
@@ -357,16 +507,16 @@ spec:
                   data:
                     azure.json: |
                       {
-                        "tenantId": "{{ $uai.status.atProvider.tenantId }}",
-                        "subscriptionId": "{{ (split "/" $rg.status.atProvider.id)._2 }}",
-                        "resourceGroup": "{{ index $rg.metadata.annotations "crossplane.io/external-name" }}",
+                        "tenantId": "{{ $identity.status.atProvider.tenantId }}",
+                        "subscriptionId": "{{ index (splitList "/" $resourceGroup.status.atProvider.id) 2 }}",
+                        "resourceGroup": "{{ $resourceGroup.metadata.annotations | dig "crossplane.io/external-name" "" }}",
                         "useWorkloadIdentityExtension": true
                       }
           ---
 
-          {{ if $role }}
-          {{ $externalDnsInternal := getComposedResource . "external-dns-internal" }}
-          {{ if (dig "metadata" "annotations" "crossplane.io/external-name" $externalDnsInternal) }}
+          {{- if $externalDnsClusterRole }}
+          {{- $externalDnsInternal := getComposedResource . "external-dns-internal" }}
+          {{- if $externalDnsInternal | dig "metadata" "annotations" "crossplane.io/external-name" "" }}
           ---
 
           apiVersion: kubernetes.crossplane.io/v1alpha2
@@ -374,6 +524,9 @@ spec:
           metadata:
             annotations:
               {{ setResourceNameAnnotation "external-dns-internal-cluster-role-binding" }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
           spec:
             managementPolicies:
             - Observe
@@ -384,22 +537,25 @@ spec:
               manifest:
                 apiVersion: rbac.authorization.k8s.io/v1
                 kind: ClusterRoleBinding
+                labels:
+                  application.appdev.awginc.com/namespace: {{ $namespace }}
+                  application.appdev.awginc.com/name: {{ $name }}
                 roleRef:
                   apiGroup: rbac.authorization.k8s.io
                   kind: ClusterRole
-                  name: {{ index $role.metadata.annotations "crossplane.io/external-name" }}
+                  name: {{ $externalDnsClusterRole.metadata.annotations | dig "crossplane.io/external-name" "" }}
                 subjects:
                 - kind: ServiceAccount
-                  namespace: {{ $ns }}
-                  name: {{ index $externalDnsInternal.metadata.annotations "crossplane.io/external-name" }}
+                  namespace: {{ $namespace }}
+                  name: {{ $externalDnsInternal.metadata.annotations | dig "crossplane.io/external-name" "" }}
           ---
 
-          {{ end }}
-          {{ end }}
+          {{- end }}
+          {{- end }}
           ---
 
-          {{ end }}
-          {{ end }}
+          {{- end }}
+          {{- end }}
           ---
   - step: ready
     functionRef:
