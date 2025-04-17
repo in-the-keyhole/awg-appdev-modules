@@ -273,46 +273,6 @@ spec:
               principalId: {{ $identity.status.atProvider.principalId }}
           ---
 
-          apiVersion: managedidentity.azure.upbound.io/v1beta1
-          kind: FederatedIdentityCredential
-          metadata:
-            annotations:
-              {{ setResourceNameAnnotation "identity-external-dns-external" }}
-            labels:
-              application.appdev.awginc.com/namespace: {{ $namespace }}
-              application.appdev.awginc.com/name: {{ $name }}
-          spec:
-            deletionPolicy: Delete
-            forProvider:
-              resourceGroupNameSelector:
-                matchControllerRef: true
-              parentId: {{ $identity.status.atProvider.id }}
-              issuer: {{ $environment.cluster.oidc_issuer_url | trim }}
-              audience:
-              - api://AzureADTokenExchange
-              subject: {{ printf "system:serviceaccount:%s:%s-external-dns-external" $namespace $name }}
-          ---
-
-          apiVersion: managedidentity.azure.upbound.io/v1beta1
-          kind: FederatedIdentityCredential
-          metadata:
-            annotations:
-              {{ setResourceNameAnnotation "identity-external-dns-internal" }}
-            labels:
-              application.appdev.awginc.com/namespace: {{ $namespace }}
-              application.appdev.awginc.com/name: {{ $name }}
-          spec:
-            deletionPolicy: Delete
-            forProvider:
-              resourceGroupNameSelector:
-                matchControllerRef: true
-              parentId: {{ $identity.status.atProvider.id }}
-              issuer: {{ $environment.cluster.oidc_issuer_url | trim }}
-              audience:
-              - api://AzureADTokenExchange
-              subject: {{ printf "system:serviceaccount:%s:%s-external-dns-internal" $namespace $name }}
-          ---
-
           apiVersion: kubernetes.crossplane.io/v1alpha2
           kind: Object
           metadata:
@@ -451,6 +411,26 @@ spec:
                   name: {{ $externalDnsExternal.metadata.annotations | dig "crossplane.io/external-name" "" }}
           ---
 
+          apiVersion: managedidentity.azure.upbound.io/v1beta1
+          kind: FederatedIdentityCredential
+          metadata:
+            annotations:
+              {{ setResourceNameAnnotation "identity-external-dns-external" }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
+          spec:
+            deletionPolicy: Delete
+            forProvider:
+              resourceGroupNameSelector:
+                matchControllerRef: true
+              parentId: {{ $identity.status.atProvider.id }}
+              issuer: {{ $environment.cluster.oidc_issuer_url | trim }}
+              audience:
+              - api://AzureADTokenExchange
+              subject: {{ printf "system:serviceaccount:%s:%s-external-dns-external" $namespace ($externalDnsExternal.metadata.annotations | dig "crossplane.io/external-name" "") }}
+          ---
+
           {{- end }}
           {{- end }}
           ---
@@ -542,6 +522,26 @@ spec:
                 - kind: ServiceAccount
                   namespace: {{ $namespace }}
                   name: {{ $externalDnsInternal.metadata.annotations | dig "crossplane.io/external-name" "" }}
+          ---
+
+          apiVersion: managedidentity.azure.upbound.io/v1beta1
+          kind: FederatedIdentityCredential
+          metadata:
+            annotations:
+              {{ setResourceNameAnnotation "identity-external-dns-internal" }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
+          spec:
+            deletionPolicy: Delete
+            forProvider:
+              resourceGroupNameSelector:
+                matchControllerRef: true
+              parentId: {{ $identity.status.atProvider.id }}
+              issuer: {{ $environment.cluster.oidc_issuer_url | trim }}
+              audience:
+              - api://AzureADTokenExchange
+              subject: {{ printf "system:serviceaccount:%s:%s-external-dns-internal" $namespace ($externalDnsInternal.metadata.annotations | dig "crossplane.io/external-name" "") }}
           ---
 
           {{- end }}

@@ -2,7 +2,7 @@ version: '3'
 
 vars:
   DISTDIR: ./dist
-  VERSION: 0.0.235
+  VERSION: 0.0.237
   XPKGS: [ 'awg-appdev' ]
   CHARTS: [ 'awg-appdev-boot', 'awg-appdev-init', 'awg-appdev-conf' ]
   REPOSITORY: awgappdevlabs.azurecr.io
