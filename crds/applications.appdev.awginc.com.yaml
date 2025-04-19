@@ -1,0 +1,287 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  creationTimestamp: "2025-04-16T01:08:52Z"
+  generation: 8
+  name: applications.appdev.awginc.com
+  ownerReferences:
+  - apiVersion: apiextensions.crossplane.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: CompositeResourceDefinition
+    name: xapplications.appdev.awginc.com
+    uid: cbf3ffb3-3683-4587-b2f0-f3e9147eb579
+  resourceVersion: "6712748"
+  uid: 8e76adb1-ba30-436c-a230-919ba5d51db0
+spec:
+  conversion:
+    strategy: None
+  group: appdev.awginc.com
+  names:
+    categories:
+    - claim
+    kind: Application
+    listKind: ApplicationList
+    plural: applications
+    singular: application
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.conditions[?(@.type=='Synced')].status
+      name: SYNCED
+      type: string
+    - jsonPath: .status.conditions[?(@.type=='Ready')].status
+      name: READY
+      type: string
+    - jsonPath: .spec.writeConnectionSecretToRef.name
+      name: CONNECTION-SECRET
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            properties:
+              name:
+                maxLength: 63
+                type: string
+            type: object
+          spec:
+            properties:
+              compositeDeletePolicy:
+                default: Background
+                enum:
+                - Background
+                - Foreground
+                type: string
+              compositionRef:
+                properties:
+                  name:
+                    type: string
+                required:
+                - name
+                type: object
+              compositionRevisionRef:
+                properties:
+                  name:
+                    type: string
+                required:
+                - name
+                type: object
+              compositionRevisionSelector:
+                properties:
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    type: object
+                required:
+                - matchLabels
+                type: object
+              compositionSelector:
+                properties:
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    type: object
+                required:
+                - matchLabels
+                type: object
+              compositionUpdatePolicy:
+                enum:
+                - Automatic
+                - Manual
+                type: string
+              defaultResourceLocation:
+                enum:
+                - southcentralus
+                type: string
+              metadataLocation:
+                enum:
+                - northcentralus
+                type: string
+              name:
+                pattern: ^[a-z0-9](([a-z0-9\-[^\-])){1,31}[a-z0-9]$
+                type: string
+              publishConnectionDetailsTo:
+                properties:
+                  configRef:
+                    default:
+                      name: default
+                    properties:
+                      name:
+                        type: string
+                    type: object
+                  metadata:
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      type:
+                        type: string
+                    type: object
+                  name:
+                    type: string
+                required:
+                - name
+                type: object
+              resourceRef:
+                properties:
+                  apiVersion:
+                    type: string
+                  kind:
+                    type: string
+                  name:
+                    type: string
+                required:
+                - apiVersion
+                - kind
+                - name
+                type: object
+              tags:
+                type: object
+              writeConnectionSecretToRef:
+                properties:
+                  name:
+                    type: string
+                required:
+                - name
+                type: object
+            required:
+            - name
+            - metadataLocation
+            - defaultResourceLocation
+            type: object
+          status:
+            properties:
+              azure:
+                properties:
+                  identity:
+                    properties:
+                      clientId:
+                        type: string
+                    type: object
+                  resources:
+                    properties:
+                      dnsZone:
+                        properties:
+                          id:
+                            type: string
+                          location:
+                            type: string
+                          managedBy:
+                            type: string
+                          name:
+                            type: string
+                        type: object
+                      internalDnsZone:
+                        properties:
+                          id:
+                            type: string
+                          location:
+                            type: string
+                          managedBy:
+                            type: string
+                          name:
+                            type: string
+                        type: object
+                      resourceGroup:
+                        properties:
+                          id:
+                            type: string
+                          location:
+                            type: string
+                          managedBy:
+                            type: string
+                          name:
+                            type: string
+                        type: object
+                      userAssignedIdentity:
+                        properties:
+                          id:
+                            type: string
+                          location:
+                            type: string
+                          managedBy:
+                            type: string
+                          name:
+                            type: string
+                        type: object
+                    type: object
+                type: object
+              claimConditionTypes:
+                items:
+                  type: string
+                type: array
+                x-kubernetes-list-type: set
+              conditions:
+                description: Conditions of the resource.
+                items:
+                  properties:
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              connectionDetails:
+                properties:
+                  lastPublishedTime:
+                    format: date-time
+                    type: string
+                type: object
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    categories:
+    - claim
+    kind: Application
+    listKind: ApplicationList
+    plural: applications
+    singular: application
+  conditions:
+  - lastTransitionTime: "2025-04-16T01:08:52Z"
+    message: no conflicts found
+    reason: NoConflicts
+    status: "True"
+    type: NamesAccepted
+  - lastTransitionTime: "2025-04-16T01:08:52Z"
+    message: the initial names have been accepted
+    reason: InitialNamesAccepted
+    status: "True"
+    type: Established
+  storedVersions:
+  - v1alpha1

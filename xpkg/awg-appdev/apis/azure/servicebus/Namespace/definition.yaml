@@ -10,6 +10,12 @@ spec:
   claimNames:
     kind: Namespace
     plural: namespaces
+  connectionSecretKeys:
+  - endpoint
+  - defaultPrimaryConnectionString
+  - defaultPrimaryKey
+  - defaultSecondaryConnectionString
+  - defaultSecondaryKey
   versions:
   - name: v1alpha1
     served: true
@@ -47,10 +53,10 @@ spec:
                         type: object
                         properties:
                           id:
-                            type: "string"
+                            type: string
                           name:
-                            type: "string"
+                            type: string
                           location:
-                            type: "string"
+                            type: string
                           managedBy:
-                            type: "string"
+                            type: string

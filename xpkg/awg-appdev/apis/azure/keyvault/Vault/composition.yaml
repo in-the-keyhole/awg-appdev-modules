@@ -8,6 +8,7 @@ spec:
   compositeTypeRef:
     apiVersion: keyvault.azure.appdev.awginc.com/v1alpha1
     kind: XVault
+  writeConnectionSecretsToNamespace: crossplane-system
   mode: Pipeline
   pipeline:
   - step: env
@@ -127,7 +128,20 @@ spec:
                   {{- with $vault.status.atProvider.managedBy }}
                   managedBy: {{ . }}
                   {{- end }}
+                  {{- with $vault.status.atProvider.vaultUri }}
+                  managedBy: {{ . }}
+                  {{- end }}
           ---
+
+          apiVersion: meta.gotemplating.fn.crossplane.io/v1alpha1
+          kind: CompositeConnectionDetails
+          data:
+          {{- $vaultConnectionDetails := .observed.resources.vault.connectionDetails }}
+            {{- if $vaultConnectionDetails }}
+            uri: {{ $vault.status.atProvider.vaultUri }}
+            {{- end }}
+          ---
+          
           {{- end }}
           {{- end }}
           ---

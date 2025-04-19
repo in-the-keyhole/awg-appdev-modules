@@ -10,6 +10,12 @@ spec:
   claimNames:
     kind: Account
     plural: accounts
+  connectionSecretKeys:
+  - accountName
+  - primaryAccessKey
+  - secondaryAccessKey
+  - primaryConnectionString
+  - secondaryConnectionString
   versions:
   - name: v1alpha1
     served: true

@@ -8,6 +8,7 @@ spec:
   compositeTypeRef:
     apiVersion: storage.azure.appdev.awginc.com/v1alpha1
     kind: XAccount
+  writeConnectionSecretsToNamespace: crossplane-system
   mode: Pipeline
   pipeline:
   - step: env
@@ -98,6 +99,9 @@ spec:
               defaultToOauthAuthentication: true
               enableHttpsTrafficOnly: true
               publicNetworkAccessEnabled: false
+            writeConnectionSecretToRef:
+              namespace: crossplane-system
+              name: {{ $xr.metadata.uid }}-storage
           ---
 
           apiVersion: storage.azure.appdev.awginc.com/v1alpha1
@@ -131,6 +135,20 @@ spec:
                   managedBy: {{ . }}
                   {{- end }}
           ---
+
+          apiVersion: meta.gotemplating.fn.crossplane.io/v1alpha1
+          kind: CompositeConnectionDetails
+          data:
+            {{- $accountConnectionDetails := .observed.resources.account.connectionDetails }}
+            {{- if $accountConnectionDetails }}
+            accountName: {{ $account.metadata.annotations | dig "crossplane.io/external-name" "" }}
+            primaryAccessKey: {{ index $accountConnectionDetails "attribute.primary_access_key" }}
+            secondaryAccessKey: {{ index $accountConnectionDetails "attribute.secondary_access_key" }}
+            primaryConnectionString: {{ index $accountConnectionDetails "attribute.primary_connection_string" }}
+            secondaryConnectionString: {{ index $accountConnectionDetails "attribute.secondary_connection_string" }}
+            {{- end }}
+          ---
+
           {{- end }}
           {{- end }}
           ---

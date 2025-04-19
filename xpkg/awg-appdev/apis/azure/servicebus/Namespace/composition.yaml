@@ -8,6 +8,7 @@ spec:
   compositeTypeRef:
     apiVersion: servicebus.azure.appdev.awginc.com/v1alpha1
     kind: XNamespace
+  writeConnectionSecretsToNamespace: crossplane-system
   mode: Pipeline
   pipeline:
   - step: env
@@ -92,6 +93,9 @@ spec:
                   application.appdev.awginc.com/name: {{ $appRef }}
               location: {{ $xr.spec.location | default $appXR.spec.defaultResourceLocation }}
               sku: Standard
+            writeConnectionSecretToRef:
+              namespace: crossplane-system
+              name: {{ $xr.metadata.uid }}-namespace
           ---
 
           apiVersion: servicebus.azure.appdev.awginc.com/v1alpha1
@@ -125,6 +129,20 @@ spec:
                   managedBy: {{ . }}
                   {{- end }}
           ---
+
+          apiVersion: meta.gotemplating.fn.crossplane.io/v1alpha1
+          kind: CompositeConnectionDetails
+          data:
+            {{- $namespaceConnectionDetails := .observed.resources.namespace.connectionDetails }}
+            {{- if $namespaceConnectionDetails }}
+            endpoint: {{ $serviceBus.status.atProvider.endpoint | b64enc }}
+            defaultPrimaryConnectionString: {{ index $namespaceConnectionDetails "attribute.default_primary_connection_string" }}
+            defaultPrimaryKey: {{ index $namespaceConnectionDetails "attribute.default_primary_key" }}
+            defaultSecondaryConnectionString: {{ index $namespaceConnectionDetails "attribute.default_secondary_connection_string" }}
+            defaultSecondaryKey: {{ index $namespaceConnectionDetails "attribute.default_secondary_key" }}
+            {{- end }}
+          ---
+
           {{- end }}
           {{- end }}
           ---

@@ -225,6 +225,8 @@ spec:
           kind: XApplication
           status:
             azure:
+              identity:
+                clientId: {{ $identity.status.atProvider.clientId }}
               resources:
                 userAssignedIdentity:
                   {{- with $identity.status.atProvider.id }}
@@ -428,7 +430,7 @@ spec:
               issuer: {{ $environment.cluster.oidc_issuer_url | trim }}
               audience:
               - api://AzureADTokenExchange
-              subject: {{ printf "system:serviceaccount:%s:%s-external-dns-external" $namespace ($externalDnsExternal.metadata.annotations | dig "crossplane.io/external-name" "") }}
+              subject: {{ printf "system:serviceaccount:%s:%s" $namespace ($externalDnsExternal.metadata.annotations | dig "crossplane.io/external-name" "") }}
           ---
 
           {{- end }}
@@ -541,7 +543,7 @@ spec:
               issuer: {{ $environment.cluster.oidc_issuer_url | trim }}
               audience:
               - api://AzureADTokenExchange
-              subject: {{ printf "system:serviceaccount:%s:%s-external-dns-internal" $namespace ($externalDnsInternal.metadata.annotations | dig "crossplane.io/external-name" "") }}
+              subject: {{ printf "system:serviceaccount:%s:%s" $namespace ($externalDnsInternal.metadata.annotations | dig "crossplane.io/external-name" "") }}
           ---
 
           {{- end }}

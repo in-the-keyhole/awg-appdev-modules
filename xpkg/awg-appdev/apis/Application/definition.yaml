@@ -44,6 +44,11 @@ spec:
               azure:
                 type: object
                 properties:
+                  identity:
+                    type: object
+                    properties:
+                      clientId:
+                        type: string
                   resources:
                     type: object
                     properties:
