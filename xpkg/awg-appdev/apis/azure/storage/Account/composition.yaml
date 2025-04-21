@@ -120,6 +120,38 @@ spec:
           {{- if dig "status" "atProvider" "id" "" $account }}
           ---
 
+          apiVersion: network.azure.upbound.io/v1beta2
+          kind: PrivateEndpoint
+          metadata:
+            annotations:
+              {{ setResourceNameAnnotation "endpoint" }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $appRef }}
+          spec:
+            managementPolicies:
+            - Observe
+            - Create
+            - Update
+            - Delete
+            forProvider:
+              tags:
+                application.appdev.awginc.com-namespace: {{ $namespace }}
+                application.appdev.awginc.com-name: {{ $appRef }}
+                account.storage.azure.appdev.awginc.com-name: {{ $xr.metadata.name }}
+              resourceGroupNameSelector:
+                matchLabels:
+                  application.appdev.awginc.com/namespace: {{ $namespace }}
+                  application.appdev.awginc.com/name: {{ $appRef }}
+              location: {{ $xr.spec.location | default $appXR.spec.defaultResourceLocation }}
+              subnetId: {{ $environment.azure.privateSubnetId | trim }}
+              privateServiceConnection:
+                isManualConnection: false
+                privateConnectionResourceId: {{ $account.status.atProvider.id }}
+                subresourceNames:
+                - blob
+          ---
+
           apiVersion: storage.azure.appdev.awginc.com/v1alpha1
           kind: XAccount
           status:

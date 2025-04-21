@@ -116,7 +116,7 @@ spec:
           {{- if dig "status" "atProvider" "id" "" $vault }}
           ---
 
-          apiVersion: network.azure.upbound.io/v1beta1
+          apiVersion: network.azure.upbound.io/v1beta2
           kind: PrivateEndpoint
           metadata:
             annotations:
@@ -140,12 +140,14 @@ spec:
                   application.appdev.awginc.com/namespace: {{ $namespace }}
                   application.appdev.awginc.com/name: {{ $appRef }}
               location: {{ $xr.spec.location | default $appXR.spec.defaultResourceLocation }}
+              subnetId: {{ $environment.azure.privateSubnetId | trim }}
               privateServiceConnection:
+                name: {{ $resourceName }}
                 isManualConnection: false
-                subnetId: {{ $environment.azure.privateSubnetId | trim }}
                 privateConnectionResourceId: {{ $vault.status.atProvider.id }}
                 subresourceNames:
                 - vault
+          ---
 
           apiVersion: keyvault.azure.appdev.awginc.com/v1alpha1
           kind: XVault

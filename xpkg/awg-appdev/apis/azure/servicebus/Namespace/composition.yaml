@@ -96,7 +96,11 @@ spec:
                   application.appdev.awginc.com/namespace: {{ $namespace }}
                   application.appdev.awginc.com/name: {{ $appRef }}
               location: {{ $xr.spec.location | default $appXR.spec.defaultResourceLocation }}
-              sku: Standard
+              sku: Premium
+              publicNetworkAccessEnabled: false
+              zoneRedundant: true
+            initProvider:
+              capacity: 1
             writeConnectionSecretToRef:
               namespace: crossplane-system
               name: {{ $xr.metadata.uid }}-namespace
@@ -112,6 +116,38 @@ spec:
 
           {{- $serviceBus := getComposedResource . "namespace" }}
           {{- if dig "status" "atProvider" "id" "" $serviceBus }}
+          ---
+
+          apiVersion: network.azure.upbound.io/v1beta2
+          kind: PrivateEndpoint
+          metadata:
+            annotations:
+              {{ setResourceNameAnnotation "endpoint" }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $appRef }}
+          spec:
+            managementPolicies:
+            - Observe
+            - Create
+            - Update
+            - Delete
+            forProvider:
+              tags:
+                application.appdev.awginc.com-namespace: {{ $namespace }}
+                application.appdev.awginc.com-name: {{ $appRef }}
+                namespace.servicebus.azure.appdev.awginc.com-name: {{ $xr.metadata.name }}
+              resourceGroupNameSelector:
+                matchLabels:
+                  application.appdev.awginc.com/namespace: {{ $namespace }}
+                  application.appdev.awginc.com/name: {{ $appRef }}
+              location: {{ $xr.spec.location | default $appXR.spec.defaultResourceLocation }}
+              subnetId: {{ $environment.azure.privateSubnetId | trim }}
+              privateServiceConnection:
+                isManualConnection: false
+                privateConnectionResourceId: {{ $serviceBus.status.atProvider.id }}
+                subresourceNames:
+                - namespace
           ---
 
           apiVersion: servicebus.azure.appdev.awginc.com/v1alpha1

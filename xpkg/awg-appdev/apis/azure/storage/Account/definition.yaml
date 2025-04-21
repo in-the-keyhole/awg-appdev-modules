@@ -53,10 +53,10 @@ spec:
                         type: object
                         properties:
                           id:
-                            type: "string"
+                            type: string
                           name:
-                            type: "string"
+                            type: string
                           location:
-                            type: "string"
+                            type: string
                           managedBy:
-                            type: "string"
+                            type: string
