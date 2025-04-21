@@ -81,7 +81,11 @@ spec:
               application.appdev.awginc.com/namespace: {{ $namespace }}
               application.appdev.awginc.com/name: {{ $appRef }}
           spec:
-            deletionPolicy: Delete
+            managementPolicies:
+            - Observe
+            - Create
+            - Update
+            - Delete
             forProvider:
               tags:
                 application.appdev.awginc.com-namespace: {{ $namespace }}
@@ -134,6 +138,86 @@ spec:
                   {{- with $account.status.atProvider.managedBy }}
                   managedBy: {{ . }}
                   {{- end }}
+          ---
+
+          apiVersion: authorization.azure.upbound.io/v1beta1
+          kind: RoleAssignment
+          metadata:
+            annotations:
+              {{ setResourceNameAnnotation "role-blob-contributor" }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
+          spec:
+            managementPolicies:
+            - Observe
+            - Create
+            - Update
+            - Delete
+            forProvider:
+              roleDefinitionName: Storage Blob Data Contributor
+              scope: {{ $account.status.atProvider.id }}
+              principalId: {{ $appXR.status.azure.resources.userAssignedIdentity.principalId }}
+          ---
+
+          apiVersion: authorization.azure.upbound.io/v1beta1
+          kind: RoleAssignment
+          metadata:
+            annotations:
+              {{ setResourceNameAnnotation "role-blob-delegator" }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
+          spec:
+            managementPolicies:
+            - Observe
+            - Create
+            - Update
+            - Delete
+            forProvider:
+              roleDefinitionName: Storage Blob Delegator
+              scope: {{ $account.status.atProvider.id }}
+              principalId: {{ $appXR.status.azure.resources.userAssignedIdentity.principalId }}
+          ---
+
+          apiVersion: authorization.azure.upbound.io/v1beta1
+          kind: RoleAssignment
+          metadata:
+            annotations:
+              {{ setResourceNameAnnotation "role-queue-contributor" }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
+          spec:
+            managementPolicies:
+            - Observe
+            - Create
+            - Update
+            - Delete
+            forProvider:
+              roleDefinitionName: Storage Queue Data Contributor
+              scope: {{ $account.status.atProvider.id }}
+              principalId: {{ $appXR.status.azure.resources.userAssignedIdentity.principalId }}
+          ---
+
+          apiVersion: authorization.azure.upbound.io/v1beta1
+          kind: RoleAssignment
+          metadata:
+            annotations:
+              {{ setResourceNameAnnotation "role-table-contributor" }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
+          spec:
+            managementPolicies:
+            - Observe
+            - Create
+            - Update
+            - Delete
+            forProvider:
+              roleDefinitionName: Storage Table Data Contributor
+              scope: {{ $account.status.atProvider.id }}
+              principalId: {{ $appXR.status.azure.resources.userAssignedIdentity.principalId }}
           ---
 
           apiVersion: meta.gotemplating.fn.crossplane.io/v1alpha1

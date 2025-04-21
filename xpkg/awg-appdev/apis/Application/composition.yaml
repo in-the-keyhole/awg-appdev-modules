@@ -56,7 +56,11 @@ spec:
               application.appdev.awginc.com/namespace: {{ $namespace }}
               application.appdev.awginc.com/name: {{ $name }}
           spec:
-            deletionPolicy: Delete
+            managementPolicies:
+            - Observe
+            - Create
+            - Update
+            - Delete
             forProvider:
               tags:
                 application.appdev.awginc.com-namespace: {{ $namespace }}
@@ -97,7 +101,11 @@ spec:
               application.appdev.awginc.com/namespace: {{ $namespace }}
               application.appdev.awginc.com/name: {{ $name }}
           spec:
-            deletionPolicy: Delete
+            managementPolicies:
+            - Observe
+            - Create
+            - Update
+            - Delete
             forProvider:
               name: {{ $resourcePrefix }}
               tags:
@@ -119,7 +127,11 @@ spec:
               application.appdev.awginc.com/namespace: {{ $namespace }}
               application.appdev.awginc.com/name: {{ $name }}
           spec:
-            deletionPolicy: Delete
+            managementPolicies:
+            - Observe
+            - Create
+            - Update
+            - Delete
             forProvider:
               tags:
                 application.appdev.awginc.com-namespace: {{ $namespace }}
@@ -162,7 +174,11 @@ spec:
               application.appdev.awginc.com/namespace: {{ $namespace }}
               application.appdev.awginc.com/name: {{ $name }}
           spec:
-            deletionPolicy: Delete
+            managementPolicies:
+            - Observe
+            - Create
+            - Update
+            - Delete
             forProvider:
               tags:
                 application.appdev.awginc.com-namespace: {{ $namespace }}
@@ -205,7 +221,11 @@ spec:
               application.appdev.awginc.com/namespace: {{ $namespace }}
               application.appdev.awginc.com/name: {{ $name }}
           spec:
-            deletionPolicy: Delete
+            managementPolicies:
+            - Observe
+            - Create
+            - Update
+            - Delete
             forProvider:
               tags:
                 application.appdev.awginc.com-namespace: {{ $namespace }}
@@ -241,6 +261,12 @@ spec:
                   {{- with $identity.status.atProvider.managedBy }}
                   managedBy: {{ . }}
                   {{- end }}
+                  {{- with $identity.status.atProvider.principalId }}
+                  principalId: {{ . }}
+                  {{- end }}
+                  {{- with $identity.status.atProvider.clientId }}
+                  clientId: {{ . }}
+                  {{- end }}
           ---
 
           apiVersion: authorization.azure.upbound.io/v1beta1
@@ -252,7 +278,11 @@ spec:
               application.appdev.awginc.com/namespace: {{ $namespace }}
               application.appdev.awginc.com/name: {{ $name }}
           spec:
-            deletionPolicy: Delete
+            managementPolicies:
+            - Observe
+            - Create
+            - Update
+            - Delete
             forProvider:
               roleDefinitionName: DNS Zone Contributor
               scope: {{ $resourceGroup.status.atProvider.id }}
@@ -268,7 +298,11 @@ spec:
               application.appdev.awginc.com/namespace: {{ $namespace }}
               application.appdev.awginc.com/name: {{ $name }}
           spec:
-            deletionPolicy: Delete
+            managementPolicies:
+            - Observe
+            - Create
+            - Update
+            - Delete
             forProvider:
               roleDefinitionName: Private DNS Zone Contributor
               scope: {{ $resourceGroup.status.atProvider.id }}
@@ -548,6 +582,121 @@ spec:
 
           {{- end }}
           {{- end }}
+          ---
+
+          {{- $serviceAccountName := $name }}
+          {{- if $xr | dig "spec" "serviceAccount" "name" "" }}
+          {{- $serviceAccountName = $xr.spec.serviceAccount.name }}
+          {{- end }}
+
+          {{- $serviceAccountResourceName := printf "%s-%s" "service-account" $serviceAccountName }}
+          apiVersion: kubernetes.crossplane.io/v1alpha2
+          kind: Object
+          metadata:
+            annotations:
+              {{ setResourceNameAnnotation $serviceAccountResourceName }}
+              crossplane.io/external-name: {{ $serviceAccountName }}
+            labels:
+              name: {{ printf "%s-%s" $name $serviceAccountName }}
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
+          spec:
+            managementPolicies:
+            - Observe
+            - Create
+            - Update
+            - Delete
+            forProvider:
+              manifest:
+                apiVersion: v1
+                kind: ServiceAccount
+                metadata:
+                  annotations:
+                    azure.workload.identity/client-id: {{ $identity.status.atProvider.clientId }}
+                  labels:
+                    application.appdev.awginc.com/namespace: {{ $namespace }}
+                    application.appdev.awginc.com/name: {{ $name }}
+                  namespace: {{ $namespace }}
+                  {{- if $xr | dig "spec" "serviceAccount" "name" "" }}
+                  name: {{ $xr.spec.serviceAccount.name }}
+                  {{- end }}
+                automountServiceAccountToken: true
+          ---
+          
+          {{- $serviceAccount := getComposedResource . $serviceAccountResourceName }}
+          {{- if $serviceAccount | dig "metadata" "annotations" "crossplane.io/external-name" "" }}  
+          ---
+
+          apiVersion: managedidentity.azure.upbound.io/v1beta1
+          kind: FederatedIdentityCredential
+          metadata:
+            annotations:
+              {{ setResourceNameAnnotation "service-account-federated-credential" }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
+          spec:
+            deletionPolicy: Delete
+            forProvider:
+              resourceGroupNameSelector:
+                matchControllerRef: true
+              parentId: {{ $identity.status.atProvider.id }}
+              issuer: {{ $environment.cluster.oidc_issuer_url | trim }}
+              audience:
+              - api://AzureADTokenExchange
+              subject: {{ printf "system:serviceaccount:%s:%s" $namespace ($serviceAccount.metadata.annotations | dig "crossplane.io/external-name" "") }}
+          ---
+
+          {{- end }}
+          ---
+
+          # This policy applies to any Deployments that are members of the Application and ensures they have the appropriate workload identity label configured on their pods.
+          apiVersion: kubernetes.crossplane.io/v1alpha2
+          kind: Object
+          metadata:
+            annotations:
+              {{ setResourceNameAnnotation "deployment-workload-identity-policy" }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
+          spec:
+            managementPolicies:
+            - Observe
+            - Create
+            - Update
+            - Delete
+            forProvider:
+              manifest:
+                apiVersion: kyverno.io/v1
+                kind: Policy
+                metadata:
+                  namespace: {{ $namespace }}
+                spec:
+                  mutateExistingOnPolicyUpdate: true
+                  useServerSideApply: true
+                  rules:
+                  - name: deployments
+                    match:
+                      any:
+                      - resources:
+                          kinds:
+                          - apps/v1/Deployment
+                          selector:
+                            matchLabels:
+                              appdev.awginc.com/application: {{ $name }}
+                    mutate:
+                      targets:
+                        - apiVersion: apps/v1
+                          kind: Deployment
+                          selector:
+                            matchLabels:
+                              appdev.awginc.com/application: {{ $name }}
+                      patchStrategicMerge:
+                        spec:
+                          template:
+                            metadata:
+                              labels:
+                                azure.workload.identity/use: "true"
           ---
 
           {{- end }}

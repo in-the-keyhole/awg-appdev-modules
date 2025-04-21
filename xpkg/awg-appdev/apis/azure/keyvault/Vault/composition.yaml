@@ -71,6 +71,8 @@ spec:
           {{- if gt (len $vaultName) 24 }}
           {{- $vaultName = printf "%s-%s" (substr 0 ((sub 24 6) | int) $vaultName | trimSuffix "-") (sha1sum $vaultName | substr 0 5) }}
           {{- end }}
+          ---
+
           apiVersion: keyvault.azure.upbound.io/v1beta2
           kind: Vault
           metadata:
@@ -81,7 +83,11 @@ spec:
               application.appdev.awginc.com/namespace: {{ $namespace }}
               application.appdev.awginc.com/name: {{ $appRef }}
           spec:
-            deletionPolicy: Delete
+            managementPolicies:
+            - Observe
+            - Create
+            - Update
+            - Delete
             forProvider:
               tags:
                 application.appdev.awginc.com-namespace: {{ $namespace }}
@@ -110,6 +116,37 @@ spec:
           {{- if dig "status" "atProvider" "id" "" $vault }}
           ---
 
+          apiVersion: network.azure.upbound.io/v1beta1
+          kind: PrivateEndpoint
+          metadata:
+            annotations:
+              {{ setResourceNameAnnotation "endpoint" }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $appRef }}
+          spec:
+            managementPolicies:
+            - Observe
+            - Create
+            - Update
+            - Delete
+            forProvider:
+              tags:
+                application.appdev.awginc.com-namespace: {{ $namespace }}
+                application.appdev.awginc.com-name: {{ $appRef }}
+                vault.keyvault.azure.appdev.awginc.com-name: {{ $xr.metadata.name }}
+              resourceGroupNameSelector:
+                matchLabels:
+                  application.appdev.awginc.com/namespace: {{ $namespace }}
+                  application.appdev.awginc.com/name: {{ $appRef }}
+              location: {{ $xr.spec.location | default $appXR.spec.defaultResourceLocation }}
+              privateServiceConnection:
+                isManualConnection: false
+                subnetId: {{ $environment.azure.privateSubnetId | trim }}
+                privateConnectionResourceId: {{ $vault.status.atProvider.id }}
+                subresourceNames:
+                - vault
+
           apiVersion: keyvault.azure.appdev.awginc.com/v1alpha1
           kind: XVault
           status:
@@ -129,8 +166,28 @@ spec:
                   managedBy: {{ . }}
                   {{- end }}
                   {{- with $vault.status.atProvider.vaultUri }}
-                  managedBy: {{ . }}
+                  uri: {{ . }}
                   {{- end }}
+          ---
+
+          apiVersion: authorization.azure.upbound.io/v1beta1
+          kind: RoleAssignment
+          metadata:
+            annotations:
+              {{ setResourceNameAnnotation "role-administrator" }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
+          spec:
+            managementPolicies:
+            - Observe
+            - Create
+            - Update
+            - Delete
+            forProvider:
+              roleDefinitionName: Key Vault Administrator
+              scope: {{ $vault.status.atProvider.id }}
+              principalId: {{ $appXR.status.azure.resources.userAssignedIdentity.principalId }}
           ---
 
           apiVersion: meta.gotemplating.fn.crossplane.io/v1alpha1

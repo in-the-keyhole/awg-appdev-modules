@@ -81,7 +81,11 @@ spec:
               application.appdev.awginc.com/namespace: {{ $namespace }}
               application.appdev.awginc.com/name: {{ $appRef }}
           spec:
-            deletionPolicy: Delete
+            managementPolicies:
+            - Observe
+            - Create
+            - Update
+            - Delete
             forProvider:
               tags:
                 application.appdev.awginc.com-namespace: {{ $namespace }}
@@ -128,6 +132,66 @@ spec:
                   {{- with $serviceBus.status.atProvider.managedBy }}
                   managedBy: {{ . }}
                   {{- end }}
+          ---
+
+          apiVersion: authorization.azure.upbound.io/v1beta1
+          kind: RoleAssignment
+          metadata:
+            annotations:
+              {{ setResourceNameAnnotation "role-owner" }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
+          spec:
+            managementPolicies:
+            - Observe
+            - Create
+            - Update
+            - Delete
+            forProvider:
+              roleDefinitionName: Azure Service Bus Data Owner
+              scope: {{ $serviceBus.status.atProvider.id }}
+              principalId: {{ $appXR.status.azure.resources.userAssignedIdentity.principalId }}
+          ---
+
+          apiVersion: authorization.azure.upbound.io/v1beta1
+          kind: RoleAssignment
+          metadata:
+            annotations:
+              {{ setResourceNameAnnotation "role-sender" }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
+          spec:
+            managementPolicies:
+            - Observe
+            - Create
+            - Update
+            - Delete
+            forProvider:
+              roleDefinitionName: Azure Service Bus Data Sender
+              scope: {{ $serviceBus.status.atProvider.id }}
+              principalId: {{ $appXR.status.azure.resources.userAssignedIdentity.principalId }}
+          ---
+
+          apiVersion: authorization.azure.upbound.io/v1beta1
+          kind: RoleAssignment
+          metadata:
+            annotations:
+              {{ setResourceNameAnnotation "role-receiver" }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $name }}
+          spec:
+            managementPolicies:
+            - Observe
+            - Create
+            - Update
+            - Delete
+            forProvider:
+              roleDefinitionName: Azure Service Bus Data Receiver
+              scope: {{ $serviceBus.status.atProvider.id }}
+              principalId: {{ $appXR.status.azure.resources.userAssignedIdentity.principalId }}
           ---
 
           apiVersion: meta.gotemplating.fn.crossplane.io/v1alpha1
