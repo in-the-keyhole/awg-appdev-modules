@@ -16,6 +16,14 @@ variable location {
   type = string
 }
 
+variable admin_username {
+  type = string
+}
+
+variable admin_password {
+  type = string
+}
+
 variable subnet {
   type = object({
     id = string
@@ -31,6 +39,10 @@ variable rules {
   default = {
     "." = [ "168.63.129.16" ]
   }
+}
+
+data azurerm_client_config current {
+
 }
 
 # create NSG for interfaces
@@ -118,18 +130,18 @@ EOF
 
 data template_file dns_resolver_execute {
   template = replace(<<-EOF
-#!/bin/sh
-cd /tmp
-cat /etc/coredns/Corefile
-wget https://github.com/coredns/coredns/releases/download/v1.12.1/coredns_1.12.1_linux_amd64.tgz
-tar xvf coredns_1.12.1_linux_amd64.tgz
-rm coredns_1.12.1_linux_amd64.tgz
-mv coredns /usr/local/bin/
-systemctl daemon-reload
-systemctl start coredns
-systemctl status coredns
-EOF
-, "\r\n", "\n")
+    #!/bin/sh
+    cd /tmp
+    cat /etc/coredns/Corefile
+    wget https://github.com/coredns/coredns/releases/download/v1.12.1/coredns_1.12.1_linux_amd64.tgz
+    tar xvf coredns_1.12.1_linux_amd64.tgz
+    rm coredns_1.12.1_linux_amd64.tgz
+    mv coredns /usr/local/bin/
+    systemctl daemon-reload
+    systemctl start coredns
+    systemctl status coredns
+    EOF
+    , "\r\n", "\n")
 }
 
 data template_cloudinit_config dns_resolver {
@@ -139,40 +151,31 @@ data template_cloudinit_config dns_resolver {
   part {
     content_type = "text/cloud-config"
     content = replace(<<-EOF
-#cloud-config
-packages:
-- wget
-write_files:
-- path: /etc/coredns/Corefile
-  encoding: b64
-  content: ${base64encode(replace(templatefile("${path.module}/Corefile.tftpl", { rules = var.rules }), "\r\n", "\n"))}
-  owner: 'root:root'
-  permissions: 0644
-- path: /etc/systemd/system/coredns.service
-  encoding: b64
-  content: ${base64encode(data.template_file.dns_resolver_service.rendered)}
-  owner: 'root:root'
-  permissions: 0644
-- path: /run/execute.sh
-  encoding: b64
-  content: ${base64encode(data.template_file.dns_resolver_execute.rendered)}
-  owner: 'root:root'
-  permissions: 0755
-runcmd:
-- /run/execute.sh
-EOF
-, "\r\n", "\n")
+      #cloud-config
+      packages:
+      - apt-utils
+      - wget
+      write_files:
+      - path: /etc/coredns/Corefile
+        encoding: b64
+        content: ${base64encode(replace(templatefile("${path.module}/Corefile.tftpl", { rules = var.rules }), "\r\n", "\n"))}
+        owner: 'root:root'
+        permissions: 0644
+      - path: /etc/systemd/system/coredns.service
+        encoding: b64
+        content: ${base64encode(data.template_file.dns_resolver_service.rendered)}
+        owner: 'root:root'
+        permissions: 0644
+      - path: /run/execute.sh
+        encoding: b64
+        content: ${base64encode(data.template_file.dns_resolver_execute.rendered)}
+        owner: 'root:root'
+        permissions: 0755
+      runcmd:
+      - /run/execute.sh
+      EOF
+      , "\r\n", "\n")
   }
-}
-
-resource random_password password {
-  length = 16
-  special = true
-  override_special = "!#$%&*()-_=+[]{}<>:?"
-}
-
-output "password" {
-  value = random_password.password.result
 }
 
 resource azurerm_linux_virtual_machine dns_resolver {
@@ -182,21 +185,20 @@ resource azurerm_linux_virtual_machine dns_resolver {
   tags = var.tags
   resource_group_name = var.resource_group.name
   location = var.location
+
   size = "Standard_B1s"
-  computer_name  = "${var.name}-dns-resolver-${count.index}"
-  admin_username = "sysadmin"
-  admin_password = random_password.password.result
   availability_set_id = azurerm_availability_set.dns_resolver.id
   network_interface_ids = [azurerm_network_interface.dns_resolver[count.index].id]
   disable_password_authentication = false
   secure_boot_enabled = true
   custom_data = data.template_cloudinit_config.dns_resolver.rendered
+  
+  computer_name  = "${var.name}-dns-resolver-${count.index}"
+  admin_username = var.admin_username
+  admin_password = var.admin_password
 
-  source_image_reference {
-    publisher = "Canonical"
-    offer = "ubuntu-24_10"
-    sku = "minimal"
-    version = "latest"
+  identity {
+    type = "SystemAssigned"
   }
 
   os_disk {
@@ -205,12 +207,38 @@ resource azurerm_linux_virtual_machine dns_resolver {
     caching = "ReadWrite"
     storage_account_type = "Standard_LRS"
   }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer = "ubuntu-24_10"
+    sku = "minimal"
+    version = "latest"
+  }
   
   boot_diagnostics {
     
   }
 
   lifecycle {
-    ignore_changes = [tags]
+    ignore_changes = [tags, identity]
   }
 }
+
+# resource azurerm_virtual_machine_extension dns_resolver {
+#   count = length(var.addresses)
+
+#   name = "AADSSHLogin"
+#   tags = var.tags
+#   virtual_machine_id = azurerm_linux_virtual_machine.dns_resolver[count.index].id
+#   publisher = "Microsoft.Azure.ActiveDirectory"
+#   type = "AADSSHLoginForLinux"
+#   type_handler_version = "1.0"
+#   auto_upgrade_minor_version = true
+# }
+
+# resource azurerm_role_assignment dns_resolver_aad_vm_admin_login {
+#   count = length(var.addresses)
+#   role_definition_name = "Virtual Machine Administrator Login"
+#   scope = azurerm_linux_virtual_machine.dns_resolver[count.index].id
+#   principal_id = data.azurerm_client_config.current.object_id
+# }

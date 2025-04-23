@@ -1,0 +1,22 @@
+apiVersion: helm.crossplane.io/v1beta1
+kind: Release
+metadata:
+  name: {{ include "awg-appdev-init.fullname" . }}-trust-manager
+  labels:
+    {{- include "awg-appdev-init.labels" . | nindent 4 }}
+  annotations:
+    crossplane.io/external-name: trust-manager
+spec:
+  reclaimPolicy: Delete
+  providerConfigRef:
+    name: default
+  forProvider:
+    namespace: cert-manager
+    chart:
+      repository: https://charts.jetstack.io
+      name: trust-manager
+      version: v0.16.0
+    values:
+      secretTargets:
+        enabled: true
+        authorizedSecretsAll: true

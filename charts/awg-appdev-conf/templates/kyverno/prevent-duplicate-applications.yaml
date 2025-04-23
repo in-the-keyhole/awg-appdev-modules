@@ -1,0 +1,59 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: prevent-duplicate-applications
+  annotations:
+    policies.kyverno.io/title: Prevent Duplicate Applications
+    policies.kyverno.io/category: Other
+    policies.kyverno.io/severity: medium
+  labels:
+    {{- include "awg-appdev-conf.labels" . | nindent 4 }}
+spec:
+  background: false
+  rules:
+  - name: claim
+    match:
+      any:
+      - resources:
+          kinds:
+          - appdev.awginc.com/v1alpha1/Application
+          operations:
+          - CREATE
+          - UPDATE
+    context:
+    - name: targets
+      apiCall:
+        urlPath: "/apis/appdev.awginc.com/v1alpha1/applications"
+        jmesPath: "{{`items[?[metadata.namespace, metadata.name] != ['{{request.object.metadata.namespace}}', '{{request.object.metadata.name}}'] && spec.name=='{{ request.object.spec.name }}'].spec.name`}}"
+    validate:
+      failureAction: Enforce
+      message: The Application {{`{{ request.object.spec.name }}`}} already exists. Duplicate Applications are not allowed.
+      deny:
+        conditions:
+          all:
+          - key: "{{`{{ request.object.spec.name }}`}}"
+            operator: AnyIn
+            value: "{{`{{ targets }}`}}"
+  - name: resource
+    match:
+      any:
+      - resources:
+          kinds:
+          - appdev.awginc.com/v1alpha1/XApplication
+          operations:
+          - CREATE
+          - UPDATE
+    context:
+    - name: targets
+      apiCall:
+        urlPath: "/apis/appdev.awginc.com/v1alpha1/xapplications"
+        jmesPath: "{{`items[?[metadata.name] != ['{{request.object.metadata.name}}'] && spec.name=='{{ request.object.spec.name }}'].spec.name`}}"
+    validate:
+      failureAction: Enforce
+      message: The XApplication {{`{{ request.object.spec.name }}`}}` already exists. Duplicate XApplications are not allowed.
+      deny:
+        conditions:
+          all:
+          - key: "{{`{{ request.object.spec.name }}`}}"
+            operator: AnyIn
+            value: "{{`{{ targets }}`}}"

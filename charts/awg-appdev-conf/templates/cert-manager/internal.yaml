@@ -1,0 +1,18 @@
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: internal
+  labels:
+    {{- include "awg-appdev-conf.labels" . | nindent 4 }}
+spec:
+  acme:
+    server: {{ .Values.security.issuers.internal.server }}
+    {{- with .Values.security.certificates }}
+    caBundle: {{ . | b64enc | quote }}
+    {{- end }}
+    privateKeySecretRef:
+      name: internal-issuer-account-key
+    solvers:
+      - http01:
+          ingress:
+            class: traefik-internal

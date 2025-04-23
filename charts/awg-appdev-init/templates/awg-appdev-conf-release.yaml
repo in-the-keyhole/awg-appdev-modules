@@ -18,4 +18,6 @@ spec:
       version: {{ .Chart.Version | quote }}
     values:
       repoHost: {{ .Values.repoHost | quote }}
+      security:
+{{ .Values.security | toYaml | indent 8 }}
     wait: true

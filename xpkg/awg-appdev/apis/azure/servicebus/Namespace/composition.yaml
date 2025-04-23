@@ -96,11 +96,11 @@ spec:
                   application.appdev.awginc.com/namespace: {{ $namespace }}
                   application.appdev.awginc.com/name: {{ $appRef }}
               location: {{ $xr.spec.location | default $appXR.spec.defaultResourceLocation }}
-              sku: Premium
-              publicNetworkAccessEnabled: false
-              zoneRedundant: true
-            initProvider:
-              capacity: 1
+              sku: Standard
+            # publicNetworkAccessEnabled: true
+            # initProvider:
+            #   capacity: 1
+            #   premium_messaging_partitions: 1
             writeConnectionSecretToRef:
               namespace: crossplane-system
               name: {{ $xr.metadata.uid }}-namespace
@@ -118,6 +118,7 @@ spec:
           {{- if dig "status" "atProvider" "id" "" $serviceBus }}
           ---
 
+          {{- /*
           apiVersion: network.azure.upbound.io/v1beta2
           kind: PrivateEndpoint
           metadata:
@@ -149,6 +150,7 @@ spec:
                 subresourceNames:
                 - namespace
           ---
+          */}}
 
           apiVersion: servicebus.azure.appdev.awginc.com/v1alpha1
           kind: XNamespace

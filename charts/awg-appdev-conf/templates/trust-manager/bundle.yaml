@@ -1,0 +1,21 @@
+apiVersion: trust.cert-manager.io/v1alpha1
+kind: Bundle
+metadata:
+  namespace: cert-manager
+  name: cacerts
+  labels:
+    {{- include "awg-appdev-conf.labels" . | nindent 4 }}
+spec:
+  sources:
+  - useDefaultCAs: true
+  {{- with .Values.security.certificates }}
+  - inLine: {{ . | quote }}
+  {{- end }}
+  target:
+    configMap:
+      key: "cacerts.pem"
+    additionalFormats:
+      jks:
+        key: "cacerts.jks"
+      pkcs12:
+        key: "cacerts.p12"

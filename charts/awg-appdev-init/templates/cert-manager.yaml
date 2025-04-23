@@ -1,0 +1,22 @@
+apiVersion: helm.crossplane.io/v1beta1
+kind: Release
+metadata:
+  name: {{ include "awg-appdev-init.fullname" . }}-cert-manager
+  labels:
+    {{- include "awg-appdev-init.labels" . | nindent 4 }}
+  annotations:
+    crossplane.io/external-name: cert-manager
+spec:
+  reclaimPolicy: Delete
+  providerConfigRef:
+    name: default
+  forProvider:
+    namespace: cert-manager
+    chart:
+      repository: https://charts.jetstack.io
+      name: cert-manager
+      version: v1.17.1
+    values:
+      crds:
+        enabled: true
+  

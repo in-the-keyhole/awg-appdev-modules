@@ -1,1 +1,12 @@
 repoHost:
+
+security:
+  certificates: ""
+  issuers:
+    cluster:
+      commonName:
+    letsencrypt:
+      email:
+      server:
+    internal:
+      server: https://ca.internal/acme/acme/directory

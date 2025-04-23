@@ -1,0 +1,19 @@
+apiVersion: helm.crossplane.io/v1beta1
+kind: Release
+metadata:
+  name: {{ include "awg-appdev-init.fullname" . }}-step-issuer
+  labels:
+    {{- include "awg-appdev-init.labels" . | nindent 4 }}
+  annotations:
+    crossplane.io/external-name: step-issuer
+spec:
+  reclaimPolicy: Delete
+  providerConfigRef:
+    name: default
+  forProvider:
+    namespace: step-issuer
+    chart:
+      repository: https://smallstep.github.io/helm-charts
+      name: step-issuer
+      version: 1.9.8
+      

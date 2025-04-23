@@ -195,8 +195,7 @@ spec:
           apiVersion: meta.gotemplating.fn.crossplane.io/v1alpha1
           kind: CompositeConnectionDetails
           data:
-          {{- $vaultConnectionDetails := .observed.resources.vault.connectionDetails }}
-            {{- if $vaultConnectionDetails }}
+            {{- if $vault.status.atProvider.vaultUri }}
             uri: {{ $vault.status.atProvider.vaultUri }}
             {{- end }}
           ---
