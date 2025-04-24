@@ -7,17 +7,18 @@ metadata:
   annotations:
     crossplane.io/external-name: awg-appdev-conf
 spec:
-  reclaimPolicy: Delete
   providerConfigRef:
     name: default
+  deletionPolicy: Delete
+  rollbackLimit: 1000
   forProvider:
     namespace: {{ .Release.Namespace }}
     chart:
       repository: oci://{{ .Values.repoHost }}/charts
       name: awg-appdev-conf
       version: {{ .Chart.Version | quote }}
+    wait: true
     values:
       repoHost: {{ .Values.repoHost | quote }}
       security:
 {{ .Values.security | toYaml | indent 8 }}
-    wait: true

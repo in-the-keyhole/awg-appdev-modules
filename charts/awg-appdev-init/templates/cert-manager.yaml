@@ -7,15 +7,17 @@ metadata:
   annotations:
     crossplane.io/external-name: cert-manager
 spec:
-  reclaimPolicy: Delete
   providerConfigRef:
     name: default
+  deletionPolicy: Delete
+  rollbackLimit: 1000
   forProvider:
     namespace: cert-manager
     chart:
       repository: https://charts.jetstack.io
       name: cert-manager
       version: v1.17.1
+    wait: true
     values:
       crds:
         enabled: true

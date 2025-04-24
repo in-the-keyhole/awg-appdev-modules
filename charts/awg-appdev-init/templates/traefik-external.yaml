@@ -7,15 +7,17 @@ metadata:
   annotations:
     crossplane.io/external-name: traefik-external
 spec:
-  reclaimPolicy: Delete
   providerConfigRef:
     name: default
+  deletionPolicy: Delete
+  rollbackLimit: 1000
   forProvider:
     namespace: traefik
     chart:
       repository: https://traefik.github.io/charts
       name: traefik
-      version: 35.0.0
+      version: 35.0.1
+    wait: true
     values:
       ports:
         web:

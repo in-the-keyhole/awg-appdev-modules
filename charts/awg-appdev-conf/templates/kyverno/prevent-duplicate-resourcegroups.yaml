@@ -1,0 +1,36 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: prevent-duplicate-resourcegroups
+  annotations:
+    policies.kyverno.io/title: Prevent Duplicate ResourceGroups
+    policies.kyverno.io/category: Other
+    policies.kyverno.io/severity: medium
+  labels:
+    {{- include "awg-appdev-conf.labels" . | nindent 4 }}
+spec:
+  background: false
+  rules:
+  - name: resource
+    match:
+      any:
+      - resources:
+          kinds:
+          - azure.upbound.io/v1beta1/ResourceGroup
+          operations:
+          - CREATE
+          - UPDATE
+    context:
+    - name: targets
+      apiCall:
+        urlPath: "/apis/azure.upbound.io/v1beta1/resourcegroups"
+        jmesPath: "{{`items[?metadata.name != '{{request.object.metadata.name}}' && metadata.annotations['crossplane.io/external-name']=='{{ request.object.metadata.annotations['crossplane.io/external-name'] }}'].metadata.annotations['crossplane.io/external-name']`}}"
+    validate:
+      failureAction: Enforce
+      message: The ResourceGroup {{`{{ request.object.metadata.name }}`}}` has a duplicate external-name. Duplicate ResourceGroups are not allowed.
+      deny:
+        conditions:
+          all:
+          - key: "{{`{{ request.object.metadata.name }}`}}"
+            operator: AnyIn
+            value: "{{`{{ targets }}`}}"

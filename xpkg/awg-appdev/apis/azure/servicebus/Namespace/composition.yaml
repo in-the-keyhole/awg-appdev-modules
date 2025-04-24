@@ -57,8 +57,7 @@ spec:
                 crossplane.io/claim-name: {{ $appRef }}
           ---
 
-          {{- if .extraResources }}
-          {{- $appXR := .extraResources | dig "application" "items" list | first | default dict | dig "resource" dict }}
+          {{- $appXR := .extraResources | default dict | dig "application" "items" list | first | default dict | dig "resource" dict }}
           {{- if not $appXR }}
           {{- fail (printf "Could not find Application: %s/%s" $namespace $appRef) }}
           {{- end }}

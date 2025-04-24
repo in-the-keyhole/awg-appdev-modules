@@ -7,13 +7,14 @@ metadata:
   annotations:
     crossplane.io/external-name: step-issuer
 spec:
-  reclaimPolicy: Delete
   providerConfigRef:
     name: default
+  deletionPolicy: Delete
+  rollbackLimit: 1000
   forProvider:
     namespace: step-issuer
     chart:
       repository: https://smallstep.github.io/helm-charts
       name: step-issuer
       version: 1.9.8
-      
+    wait: true

@@ -7,15 +7,17 @@ metadata:
   annotations:
     crossplane.io/external-name: trust-manager
 spec:
-  reclaimPolicy: Delete
   providerConfigRef:
     name: default
+  deletionPolicy: Delete
+  rollbackLimit: 1000
   forProvider:
     namespace: cert-manager
     chart:
       repository: https://charts.jetstack.io
       name: trust-manager
       version: v0.16.0
+    wait: true
     values:
       secretTargets:
         enabled: true

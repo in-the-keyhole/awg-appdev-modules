@@ -130,7 +130,8 @@ EOF
 
 data template_file dns_resolver_execute {
   template = replace(<<-EOF
-    #!/bin/sh
+    #!/bin/bash -e
+
     cd /tmp
     cat /etc/coredns/Corefile
     wget https://github.com/coredns/coredns/releases/download/v1.12.1/coredns_1.12.1_linux_amd64.tgz
@@ -172,6 +173,8 @@ data template_cloudinit_config dns_resolver {
         owner: 'root:root'
         permissions: 0755
       runcmd:
+      - apt-get update
+      - apt-get install -y wget
       - /run/execute.sh
       EOF
       , "\r\n", "\n")

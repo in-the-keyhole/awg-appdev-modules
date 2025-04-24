@@ -124,8 +124,12 @@ resource azurerm_network_interface_security_group_association stepca {
 
 data template_file stepca_execute {
   template = replace(<<-EOF
-#!/bin/sh
+#!/bin/bash -e
+
+# download install script
 curl -sSLO https://files.smallstep.com/install-step-ra.sh
+
+# execute install script
 bash install-step-ra.sh \
   --ca-url "${var.ca_url}" \
   --fingerprint "${var.ca_fingerprint}" \
@@ -133,6 +137,10 @@ bash install-step-ra.sh \
   --provisioner-password-file "/run/provisioner.passwd" \
   --dns-names "${join(",", var.dns_names)}" \
   --listen-address ":443"
+  
+# output service status
+sleep 5
+journalctl -u step-ca.service
 EOF
   , "\r\n", "\n")
 }
@@ -160,6 +168,8 @@ data template_cloudinit_config stepca {
         owner: 'root:root'
         permissions: 0755
       runcmd:
+      - apt-get update
+      - apt-get install -y curl jq
       - /run/execute.sh
       EOF
       , "\r\n", "\n")
