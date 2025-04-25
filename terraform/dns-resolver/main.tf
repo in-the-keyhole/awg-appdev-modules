@@ -112,15 +112,53 @@ resource azurerm_network_interface_security_group_association dns_resolver {
   network_security_group_id = azurerm_network_security_group.dns_resolver.id
 }
 
+data template_file dns_resolver_users {
+  template = replace(<<-EOF
+u coredns - "CoreDNS is a DNS server that chains plugins" /var/lib/coredns
+EOF
+, "\r\n", "\n")
+}
+
+data template_file dns_resolver_logs {
+  template = replace(<<-EOF
+/var/log/coredns.log {
+  rotate 5
+  size 10M
+  compress
+  notifempty
+}
+
+/var/log/coredns.err.log {
+  rotate 5
+  size 10M
+  compress
+  notifempty
+}
+EOF
+, "\r\n", "\n")
+}
+
 data template_file dns_resolver_service {
   template = replace(<<-EOF
 [Unit]
 Description=CoreDNS DNS Server
+Documentation=https://coredns.io
 After=network.target
 
 [Service]
-Type=simple
+PermissionsStartOnly=true
+LimitNOFILE=1048576
+LimitNPROC=512
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+User=coredns
+WorkingDirectory=/var/lib/coredns
 ExecStart=/usr/local/bin/coredns -conf /etc/coredns/Corefile
+ExecReload=/bin/kill -SIGUSR1 $MAINPID
+Restart=on-failure
+StandardOutput=append:/var/log/coredns.log
+StandardError=append:/var/log/coredns.err.log
 
 [Install]
 WantedBy=multi-user.target
@@ -131,15 +169,21 @@ EOF
 data template_file dns_resolver_execute {
   template = replace(<<-EOF
     #!/bin/bash -e
+    
+    if ! getent passwd coredns > /dev/null; then
+      adduser --system --disabled-password --disabled-login --home /var/lib/coredns --quiet --force-badname --group coredns
+    fi
 
     cd /tmp
-    cat /etc/coredns/Corefile
     wget https://github.com/coredns/coredns/releases/download/v1.12.1/coredns_1.12.1_linux_amd64.tgz
     tar xvf coredns_1.12.1_linux_amd64.tgz
     rm coredns_1.12.1_linux_amd64.tgz
     mv coredns /usr/local/bin/
+
+    cat /etc/coredns/Corefile
     systemctl daemon-reload
-    systemctl start coredns
+    systemctl enable coredns
+    systemctl start  coredns
     systemctl status coredns
     EOF
     , "\r\n", "\n")
@@ -160,6 +204,16 @@ data template_cloudinit_config dns_resolver {
       - path: /etc/coredns/Corefile
         encoding: b64
         content: ${base64encode(replace(templatefile("${path.module}/Corefile.tftpl", { rules = var.rules }), "\r\n", "\n"))}
+        owner: 'root:root'
+        permissions: 0644
+      - path: /usr/lib/sysusers.d/coredns-sysusers.conf
+        encoding: b64
+        content: ${base64encode(data.template_file.dns_resolver_users.rendered)}
+        owner: 'root:root'
+        permissions: 0644
+      - path: /etc/logrotate.d/coredns-log.conf
+        encoding: b64
+        content: ${base64encode(data.template_file.dns_resolver_logs.rendered)}
         owner: 'root:root'
         permissions: 0644
       - path: /etc/systemd/system/coredns.service

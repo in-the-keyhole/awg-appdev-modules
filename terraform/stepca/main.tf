@@ -139,8 +139,11 @@ bash install-step-ra.sh \
   --listen-address ":443"
   
 # output service status
-sleep 5
-journalctl -u step-ca.service
+systemctl daemon-reload
+systemctl enable step-ca
+systemctl start  step-ca
+systemctl status step-ca
+journalctl -u step-ca
 EOF
   , "\r\n", "\n")
 }
