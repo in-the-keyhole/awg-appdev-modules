@@ -1,3 +1,3 @@
-# AWG dns-resolver Terraform Module
+# AWG Step CA Registration Authority
 
-This module generates a set of Minimal Ubuntu Virtual machines that implement CoreDNS. The CoreDNS file is configured from the input variables to forward certain domain names to certain remote DNS servers.
+This module connects to the Smallstep CA and allocates a JWK provisioner for each replica. It then creates a Linux Virtual Machine installed as a replica and initializes it.

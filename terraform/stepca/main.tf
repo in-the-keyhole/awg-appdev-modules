@@ -22,6 +22,22 @@ variable subnet {
   })
 }
 
+variable replicas {
+  type = number
+}
+
+variable dns_names {
+  type = set(string)
+}
+
+variable stepca_token {
+  type = string
+}
+
+variable stepca_uuid {
+  type = string
+}
+
 variable admin_username {
   type = string
 }
@@ -30,32 +46,51 @@ variable admin_password {
   type = string
 }
 
-variable replicas {
-  type = number
+terraform {
+  required_providers {
+    smallstep = {
+      source = "smallstep/smallstep"
+      version = "0.6.0"
+    }
+    jwk = {
+      source = "tieto-cem/jwk",
+      version = "1.1.0"
+    }
+  }
 }
 
-variable ca_url {
-  type = string
-}
-
-variable ca_fingerprint {
-  type = string
-}
-
-variable ca_provisioner_name {
-  type = string
-}
-
-variable ca_provisioner_password {
-  type = string
-}
-
-variable dns_names {
-  type = set(string)
+provider smallstep {
+  bearer_token = var.stepca_token
 }
 
 data azurerm_client_config current {
 
+}
+
+data smallstep_authority ca {
+  id = var.stepca_uuid
+}
+
+resource jwk_ec_key jwk {
+  count = var.replicas
+
+  use = "sig"  
+  kid = "${var.name}-${count.index}"
+  alg = "ES256"
+  crv = "P-256"
+}
+
+resource smallstep_provisioner jwk {
+  count = var.replicas
+
+  authority_id = data.smallstep_authority.ca.id
+  name = "${var.name}-${count.index}"
+  type = "JWK"
+
+  jwk = {
+    key = "${nonsensitive(provider::jwk::public_key(jwk_ec_key.jwk[count.index].json, "encrypt-1"))}\n"
+    encrypted_key = jwk_ec_key.jwk[count.index].json
+  }
 }
 
 # create availability set to link stepca instances together
@@ -123,6 +158,8 @@ resource azurerm_network_interface_security_group_association stepca {
 }
 
 data template_file stepca_execute {
+  count = var.replicas
+
   template = replace(<<-EOF
 #!/bin/bash -e
 
@@ -131,9 +168,9 @@ curl -sSLO https://files.smallstep.com/install-step-ra.sh
 
 # execute install script
 bash install-step-ra.sh \
-  --ca-url "${var.ca_url}" \
-  --fingerprint "${var.ca_fingerprint}" \
-  --provisioner-name "${var.ca_provisioner_name}" \
+  --ca-url "https://${data.smallstep_authority.ca.domain}/" \
+  --fingerprint "${data.smallstep_authority.ca.fingerprint}" \
+  --provisioner-name "${var.name}-stepca-${count.index}" \
   --provisioner-password-file "/run/provisioner.passwd" \
   --dns-names "${join(",", var.dns_names)}" \
   --listen-address ":443"
@@ -149,6 +186,8 @@ EOF
 }
 
 data template_cloudinit_config stepca {
+  count = var.replicas
+
   gzip = true
   base64_encode = true
 
@@ -163,11 +202,11 @@ data template_cloudinit_config stepca {
       write_files:
       - path: /run/provisioner.passwd
         encoding: b64
-        content: ${base64encode(var.ca_provisioner_password)}
+        content: ${base64encode("")}
         owner: 'root:root'
       - path: /run/execute.sh
         encoding: b64
-        content: ${base64encode(data.template_file.stepca_execute.rendered)}
+        content: ${base64encode(data.template_file.stepca_execute[count.index].rendered)}
         owner: 'root:root'
         permissions: 0755
       runcmd:
@@ -192,7 +231,7 @@ resource azurerm_linux_virtual_machine stepca {
   network_interface_ids = [azurerm_network_interface.stepca[count.index].id]
   disable_password_authentication = false
   secure_boot_enabled = true
-  custom_data = data.template_cloudinit_config.stepca.rendered
+  custom_data = data.template_cloudinit_config.stepca[count.index].rendered
   
   computer_name  = "${var.name}-stepca-${count.index}"
   admin_username = var.admin_username

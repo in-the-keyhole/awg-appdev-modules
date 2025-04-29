@@ -1,0 +1,56 @@
+# apiVersion: helm.crossplane.io/v1beta1
+# kind: Release
+# metadata:
+#   name: {{ include "awg-appdev-init.fullname" . }}-openbao
+#   labels:
+#     {{- include "awg-appdev-init.labels" . | nindent 4 }}
+#   annotations:
+#     crossplane.io/external-name: openbao
+# spec:
+#   providerConfigRef:
+#     name: default
+#   deletionPolicy: Delete
+#   rollbackLimit: 1000
+#   forProvider:
+#     namespace: openbao
+#     chart:
+#       repository: https://openbao.github.io/openbao-helm
+#       name: openbao
+#     wait: true
+#     values:
+#       server:
+#         ha:
+#           enabled: true
+#           config: |
+#             ui = true
+
+#             listener "tcp" {
+#               tls_disable = 1
+#               address = "[::]:8200"
+#               cluster_address = "[::]:8201"
+#             }
+
+#             storage "consul" {
+#               path = "openbao"
+#               address = "HOST_IP:8500"
+#             }
+
+#             service_registration "kubernetes" {
+
+#             }
+
+#             seal "azurekeyvault" {
+#               tenant_id = {{ .Values.azure.tenantId }}
+#               vault_name = {{ .Values.azure.keyvault.name }}
+#               key_name = "openbao_key"
+#             }
+
+#             telemetry {
+#               prometheus_retention_time = "30s"
+#               disable_hostname = true
+#             }
+#       pod:
+#         extraLabels:
+#           azure.workload.identity/use: "true"
+#         annotations:
+#           azure.workload.identity/inject-proxy-sidecar: "true"
