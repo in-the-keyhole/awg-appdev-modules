@@ -3,7 +3,7 @@ kind: Configuration
 metadata:
   name: awg-appdev
   labels:
-    {{- include "awg-appdev-conf.labels" . | nindent 4 }}
+    {{- include "awg-appdev-init.labels" . | nindent 4 }}
 spec:
   ignoreCrossplaneConstraints: false
   package: {{ .Values.repoHost }}/xpkgs/awg-appdev:{{ .Chart.AppVersion  }}

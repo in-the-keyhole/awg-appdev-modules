@@ -1,13 +1,14 @@
 repoHost:
 
 security:
-  certificates: ""
+  caroots: ""
   issuers:
-    cluster:
-      commonName:
-    letsencrypt:
-      email:
+    internal:
       server:
+      email:
+    external:
+      server:
+      email:
 
 # set of crossplane providers to install by default
 crossplane:

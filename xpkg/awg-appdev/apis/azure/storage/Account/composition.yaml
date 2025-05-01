@@ -24,27 +24,24 @@ spec:
               name: awg-appdev
   - step: render
     functionRef:
-      name: crossplane-contrib-function-go-templating
+      name: upbound-function-go-templating
     input:
       apiVersion: gotemplating.fn.crossplane.io/v1beta1
       kind: GoTemplate
       source: Inline
       inline:
         template: |
-          ---
           {{- $environment := .context | dig "apiextensions.crossplane.io/environment" "" }}
           {{- if not $environment }}
           {{- fail "Could not load environment config." }}
           {{- end }}
           {{- $defaultName := $environment.defaultName | trim }}
-          ---
 
           {{- $xr := getCompositeResource . }}
           {{- $namespace := $xr.spec.claimRef.namespace }}
           {{- $name := $xr.spec.claimRef.name }}
           {{- $appRef := $xr.spec.applicationRef.name }}
           {{- $hash := printf "%s-%s" $namespace $name | sha1sum | substr 0 5 }}
-          ---
 
           apiVersion: meta.gotemplating.fn.crossplane.io/v1alpha1
           kind: ExtraResources
@@ -58,13 +55,8 @@ spec:
           ---
 
           {{- $appXR := .extraResources | default dict | dig "application" "items" list | first | default dict | dig "resource" dict }}
-          {{- if not $appXR }}
-          {{- fail (printf "Could not find Application: %s/%s" $namespace $appRef) }}
-          {{- end }}
-          ---
-
+          {{- if $appXR }}
           {{- $resourceName := printf "%s-app-%s-%s" $defaultName $appXR.spec.name $hash }}
-          ---
 
           {{- $accountName := $resourceName | replace "-" "" }}
           {{- if gt (len $accountName) 24 }}
@@ -117,13 +109,12 @@ spec:
 
           {{- $account := getComposedResource . "account" }}
           {{- if dig "status" "atProvider" "id" "" $account }}
-          ---
 
           apiVersion: network.azure.upbound.io/v1beta2
           kind: PrivateEndpoint
           metadata:
             annotations:
-              {{ setResourceNameAnnotation "endpoint" }}
+              {{ setResourceNameAnnotation "blob-endpoint" }}
             labels:
               application.appdev.awginc.com/namespace: {{ $namespace }}
               application.appdev.awginc.com/name: {{ $appRef }}
@@ -149,6 +140,70 @@ spec:
                 privateConnectionResourceId: {{ $account.status.atProvider.id }}
                 subresourceNames:
                 - blob
+          ---
+
+          apiVersion: network.azure.upbound.io/v1beta2
+          kind: PrivateEndpoint
+          metadata:
+            annotations:
+              {{ setResourceNameAnnotation "table-endpoint" }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $appRef }}
+          spec:
+            managementPolicies:
+            - Observe
+            - Create
+            - Update
+            - Delete
+            forProvider:
+              tags:
+                application.appdev.awginc.com-namespace: {{ $namespace }}
+                application.appdev.awginc.com-name: {{ $appRef }}
+                account.storage.azure.appdev.awginc.com-name: {{ $xr.metadata.name }}
+              resourceGroupNameSelector:
+                matchLabels:
+                  application.appdev.awginc.com/namespace: {{ $namespace }}
+                  application.appdev.awginc.com/name: {{ $appRef }}
+              location: {{ $xr.spec.location | default $appXR.spec.defaultResourceLocation }}
+              subnetId: {{ $environment.azure.privateSubnetId | trim }}
+              privateServiceConnection:
+                isManualConnection: false
+                privateConnectionResourceId: {{ $account.status.atProvider.id }}
+                subresourceNames:
+                - table
+          ---
+
+          apiVersion: network.azure.upbound.io/v1beta2
+          kind: PrivateEndpoint
+          metadata:
+            annotations:
+              {{ setResourceNameAnnotation "queue-endpoint" }}
+            labels:
+              application.appdev.awginc.com/namespace: {{ $namespace }}
+              application.appdev.awginc.com/name: {{ $appRef }}
+          spec:
+            managementPolicies:
+            - Observe
+            - Create
+            - Update
+            - Delete
+            forProvider:
+              tags:
+                application.appdev.awginc.com-namespace: {{ $namespace }}
+                application.appdev.awginc.com-name: {{ $appRef }}
+                account.storage.azure.appdev.awginc.com-name: {{ $xr.metadata.name }}
+              resourceGroupNameSelector:
+                matchLabels:
+                  application.appdev.awginc.com/namespace: {{ $namespace }}
+                  application.appdev.awginc.com/name: {{ $appRef }}
+              location: {{ $xr.spec.location | default $appXR.spec.defaultResourceLocation }}
+              subnetId: {{ $environment.azure.privateSubnetId | trim }}
+              privateServiceConnection:
+                isManualConnection: false
+                privateConnectionResourceId: {{ $account.status.atProvider.id }}
+                subresourceNames:
+                - queue
           ---
 
           apiVersion: storage.azure.appdev.awginc.com/v1alpha1
@@ -266,7 +321,6 @@ spec:
 
           {{- end }}
           {{- end }}
-          ---
   - step: ready
     functionRef:
-      name: crossplane-contrib-function-auto-ready
+      name: upbound-function-auto-ready

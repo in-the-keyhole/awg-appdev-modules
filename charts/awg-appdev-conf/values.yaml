@@ -1,12 +1,13 @@
 repoHost:
 
 security:
-  certificates: ""
+  caroots: ""
   issuers:
     cluster:
       commonName:
-    letsencrypt:
-      email:
-      server:
     internal:
       server: https://ca.internal/acme/acme/directory
+      email: appdev@awginc.com
+    external:
+      server: https://acme-v02.api.letsencrypt.org/
+      email: appdev@awginc.com

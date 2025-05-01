@@ -24,9 +24,13 @@ locals {
     vm_scale_set_name = var.name
     keyvault = var.keyvault
     keyvault_key = var.keyvault_key
-    tls_keyvault_secret = var.tls_keyvault_secret
+    tls_keyvault_certificate = var.tls_keyvault_certificate
     leader_tls_servername = var.dns_name
   }), "\r\n", "\n")
+}
+
+output "keyv" {
+  value = var.tls_keyvault_certificate
 }
 
 data template_cloudinit_config openbao {
@@ -39,16 +43,41 @@ data template_cloudinit_config openbao {
       #cloud-config
       packages:
       - apt-utils
+      - ca-certificates
       - curl
       write_files:
-      - path: /run/install_openbao.sh
+      - path: /usr/local/share/ca-certificates/awg.crt
+        owner: "root:root"
+        permissions: "0644"
+        encoding: b64
+        content: ${base64encode(var.root_ca_certs)}
+      - path: /etc/cron.hourly/install_openbao_tls.sh
+        owner: "root:root"
+        permissions: "0755"
+        content: |
+          #!/bin/bash -e
+
+          # wait for AKV certificate
+          while [ ! -f /var/lib/waagent/Microsoft.Azure.KeyVault.Store/${var.keyvault.name}.${var.tls_keyvault_certificate.name} ]; do
+            sleep 5
+          done
+          
+          openssl ec -outform pem -in /var/lib/waagent/Microsoft.Azure.KeyVault.Store/${var.keyvault.name}.${var.tls_keyvault_certificate.name} -out /opt/openbao/tls/tls.key
+          openssl x509 -outform pem -in /var/lib/waagent/Microsoft.Azure.KeyVault.Store/${var.keyvault.name}.${var.tls_keyvault_certificate.name} -out /opt/openbao/tls/tls.crt
+
+          systemctl reload openbao
+
+      - path: /usr/local/bin/install_openbao.sh
         encoding: b64
         content: ${base64encode(local.install_openbao_sh)}
-        owner: 'root:root'
-        permissions: 0755
+        owner: "root:root"
+        permissions: "0755"
       runcmd:
       - apt-get update
-      - /run/install_openbao.sh
+      - update-ca-certificates
+      - update-ca-certificates
+      - /usr/local/bin/install_openbao.sh
+      - /etc/cron.hourly/install_openbao_tls.sh
       EOF
       , "\r\n", "\n")
   }
@@ -88,6 +117,15 @@ resource azurerm_lb_rule openbao {
   disable_outbound_snat = true
   frontend_ip_configuration_name = var.load_balancer_front_end.name
   backend_address_pool_ids = [azurerm_lb_backend_address_pool.openbao.id]
+  probe_id = azurerm_lb_probe.openbao.id
+}
+
+resource azurerm_lb_probe openbao {
+  name = var.name
+  loadbalancer_id = var.load_balancer.id
+  protocol = "Https"
+  port = 8200
+  request_path = "/v1/sys/health?standbyok=true"
 }
 
 resource azurerm_network_security_group openbao {
@@ -134,20 +172,28 @@ resource azurerm_linux_virtual_machine_scale_set openbao {
 
   upgrade_mode = "Automatic"
   instances = var.instance_count
-  sku = "Standard_B2ts_v2"
+  sku = var.vm_sku
   zones = var.zones
   computer_name_prefix = "${var.name}-"
   disable_password_authentication = false
   admin_username = var.admin_username
   admin_password = var.admin_password
   custom_data = data.template_cloudinit_config.openbao.rendered
+  health_probe_id = azurerm_lb_probe.openbao.id
 
   rolling_upgrade_policy {
     max_batch_instance_percent = 20
     max_unhealthy_instance_percent = 20
     max_unhealthy_upgraded_instance_percent = 20
-    pause_time_between_batches = "PT1M"
+    pause_time_between_batches = "PT10M"
+    prioritize_unhealthy_instances_enabled = true
   }
+
+  # automatic_instance_repair {
+  #   enabled = true
+  #   action = "Reimage"
+  #   grace_period = "PT10M"
+  # }
 
   admin_ssh_key  {
     username = var.admin_username
@@ -188,16 +234,42 @@ resource azurerm_linux_virtual_machine_scale_set openbao {
     
   }
 
+  # extension {
+  #   name = "HealthExtension"
+  #   publisher = "Microsoft.ManagedServices"
+  #   type = "ApplicationHealthLinux"
+  #   type_handler_version = "2.0"
+  #   automatic_upgrade_enabled = true
+  #   auto_upgrade_minor_version = true
+
+  #   settings = jsonencode({
+  #     protocol = "https"
+  #     port = 8200
+  #     requestPath = "/v1/sys/health?standbyok=true"
+  #     intervalInSeconds = 5
+  #     numberOfProbes = 3
+  #   })
+  # }
+
   extension {
-    name = "OpenBaoHealthExtension"
-    publisher = "Microsoft.ManagedServices"
-    type = "ApplicationHealthLinux"
-    type_handler_version = "1.0"
+    name = "KeyVaultForLinux"
+    publisher = "Microsoft.Azure.KeyVault"
+    type = "KeyVaultForLinux"
+    type_handler_version = "3.0"
+    automatic_upgrade_enabled = true
+    auto_upgrade_minor_version = true
 
     settings = jsonencode({
-      protocol = "https"
-      port = 8200
-      requestPath = "/v1/sys/health"
+      secretsManagementSettings = {
+        requireInitialSync = true
+        observedCertificates = [{
+          url = "${var.tls_keyvault_certificate.versionless_secret_id}"
+        }]
+      }
+      authenticationSettings = {
+          msiEndpoint = "http://169.254.169.254/metadata/identity"
+          msiClientId = var.identity.client_id
+      }
     })
   }
 

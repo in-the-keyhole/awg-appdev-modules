@@ -24,7 +24,7 @@ spec:
     - name: targets
       apiCall:
         urlPath: "/apis/azure.upbound.io/v1beta1/resourcegroups"
-        jmesPath: "{{`items[?metadata.name != '{{request.object.metadata.name}}' && metadata.annotations['crossplane.io/external-name']=='{{ request.object.metadata.annotations['crossplane.io/external-name'] }}'].metadata.annotations['crossplane.io/external-name']`}}"
+        jmesPath: "{{`items[?metadata.name != '{{ request.object.metadata.name }}' && metadata.annotations.\"crossplane.io/external-name\"=='{{ request.object.metadata.annotations.\"crossplane.io/external-name\" }}'].metadata.annotations.\"crossplane.io/external-name\"`}}"
     validate:
       failureAction: Enforce
       message: The ResourceGroup {{`{{ request.object.metadata.name }}`}}` has a duplicate external-name. Duplicate ResourceGroups are not allowed.

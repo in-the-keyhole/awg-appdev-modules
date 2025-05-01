@@ -16,7 +16,7 @@ spec:
     chart:
       repository: https://kyverno.github.io/kyverno/
       name: kyverno
-      version: 3.3.7
+      version: 3.4.0
     wait: true
     values:
       features:
@@ -46,6 +46,14 @@ spec:
               - list
               - watch
               - update
+            - apiGroups:
+              - azure.upbound.io
+              resources:
+              - "*"
+              verbs:
+              - get
+              - list
+              - watch
             - apiGroups:
               - appdev.awginc.com
               resources:
@@ -79,6 +87,14 @@ spec:
               - watch
               - update
             - apiGroups:
+              - azure.upbound.io
+              resources:
+              - "*"
+              verbs:
+              - get
+              - list
+              - watch
+            - apiGroups:
               - appdev.awginc.com
               resources:
               - "*"
@@ -92,6 +108,14 @@ spec:
           clusterRole:
             extraResources:
             - apiGroups:
+              - azure.upbound.io
+              resources:
+              - "*"
+              verbs:
+              - get
+              - list
+              - watch
+            - apiGroups:
               - appdev.awginc.com
               resources:
               - "*"
@@ -104,6 +128,14 @@ spec:
         rbac:
           clusterRole:
             extraResources:
+            - apiGroups:
+              - azure.upbound.io
+              resources:
+              - "*"
+              verbs:
+              - get
+              - list
+              - watch
             - apiGroups:
               - appdev.awginc.com
               resources:

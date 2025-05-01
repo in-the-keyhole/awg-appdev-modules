@@ -24,27 +24,24 @@ spec:
               name: awg-appdev
   - step: render
     functionRef:
-      name: crossplane-contrib-function-go-templating
+      name: upbound-function-go-templating
     input:
       apiVersion: gotemplating.fn.crossplane.io/v1beta1
       kind: GoTemplate
       source: Inline
       inline:
         template: |
-          ---
           {{- $environment := .context | dig "apiextensions.crossplane.io/environment" "" }}
           {{- if not $environment }}
           {{- fail "Could not load environment config." }}
           {{- end }}
           {{- $defaultName := $environment.defaultName | trim }}
-          ---
 
           {{- $xr := getCompositeResource . }}
           {{- $namespace := $xr.spec.claimRef.namespace }}
           {{- $name := $xr.spec.claimRef.name }}
           {{- $appRef := $xr.spec.applicationRef.name }}
           {{- $hash := printf "%s-%s" $namespace $name | sha1sum | substr 0 5 }}
-          ---
 
           apiVersion: meta.gotemplating.fn.crossplane.io/v1alpha1
           kind: ExtraResources
@@ -58,19 +55,13 @@ spec:
           ---
 
           {{- $appXR := .extraResources | default dict | dig "application" "items" list | first | default dict | dig "resource" dict }}
-          {{- if not $appXR }}
-          {{- fail (printf "Could not find Application: %s/%s" $namespace $appRef) }}
-          {{- end }}
-          ---
-
+          {{- if $appXR }}
           {{- $resourceName := printf "%s-app-%s-%s" $defaultName $appXR.spec.name $hash }}
-          ---
 
           {{- $vaultName := $resourceName }}
           {{- if gt (len $vaultName) 24 }}
           {{- $vaultName = printf "%s-%s" (substr 0 ((sub 24 6) | int) $vaultName | trimSuffix "-") (sha1sum $vaultName | substr 0 5) }}
           {{- end }}
-          ---
 
           apiVersion: keyvault.azure.upbound.io/v1beta2
           kind: Vault
@@ -113,7 +104,6 @@ spec:
 
           {{- $vault := getComposedResource . "vault" }}
           {{- if dig "status" "atProvider" "id" "" $vault }}
-          ---
 
           apiVersion: network.azure.upbound.io/v1beta2
           kind: PrivateEndpoint
@@ -201,7 +191,6 @@ spec:
           
           {{- end }}
           {{- end }}
-          ---
   - step: ready
     functionRef:
-      name: crossplane-contrib-function-auto-ready
+      name: upbound-function-auto-ready

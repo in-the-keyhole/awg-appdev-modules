@@ -31,7 +31,7 @@ spec:
             enabled: true
         kubernetesGateway:
           enabled: true
-          labelSelector: "traefik-instance=traefik-internal"
+          labelSelector: "traefik-instance=traefik-external"
       ingressClass:
         enabled: true
         isDefaultClass: false

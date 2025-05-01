@@ -24,7 +24,7 @@ spec:
     - name: targets
       apiCall:
         urlPath: "/apis/appdev.awginc.com/v1alpha1/applications"
-        jmesPath: "{{`items[?[metadata.namespace, metadata.name] != ['{{request.object.metadata.namespace}}', '{{request.object.metadata.name}}'] && spec.name=='{{ request.object.spec.name }}'].spec.name`}}"
+        jmesPath: "{{`items[?[metadata.namespace, metadata.name] != ['{{ request.object.metadata.namespace }}', '{{ request.object.metadata.name }}'] && spec.name=='{{ request.object.spec.name }}'].spec.name`}}"
     validate:
       failureAction: Enforce
       message: The Application {{`{{ request.object.spec.name }}`}} already exists. Duplicate Applications are not allowed.
@@ -47,7 +47,7 @@ spec:
     - name: targets
       apiCall:
         urlPath: "/apis/appdev.awginc.com/v1alpha1/xapplications"
-        jmesPath: "{{`items[?[metadata.name] != ['{{request.object.metadata.name}}'] && spec.name=='{{ request.object.spec.name }}'].spec.name`}}"
+        jmesPath: "{{`items[?[metadata.name] != ['{{ request.object.metadata.name }}'] && spec.name=='{{ request.object.spec.name }}'].spec.name`}}"
     validate:
       failureAction: Enforce
       message: The XApplication {{`{{ request.object.spec.name }}`}}` already exists. Duplicate XApplications are not allowed.

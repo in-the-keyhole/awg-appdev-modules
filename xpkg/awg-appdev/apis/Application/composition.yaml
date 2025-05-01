@@ -23,20 +23,18 @@ spec:
               name: awg-appdev
   - step: render
     functionRef:
-      name: crossplane-contrib-function-go-templating
+      name: upbound-function-go-templating
     input:
       apiVersion: gotemplating.fn.crossplane.io/v1beta1
       kind: GoTemplate
       source: Inline
       inline:
         template: |
-          ---
           {{- $environment := .context | dig "apiextensions.crossplane.io/environment" "" }}
           {{- if not $environment }}
           {{- fail "Could not load environment config." }}
           {{- end }}
           {{- $defaultName := $environment.defaultName | trim }}
-          ---
 
           {{- $xr := getCompositeResource . }}
           {{- $namespace := $xr.spec.claimRef.namespace }}
@@ -44,7 +42,6 @@ spec:
           {{- $appName := $xr.spec.name }}
           {{- $hash := printf "%s-%s" $namespace $name | sha1sum | substr 0 5 }}
           {{- $resourcePrefix := printf "%s-app-%s" $defaultName $appName }}
-          ---
 
           apiVersion: azure.upbound.io/v1beta1
           kind: ResourceGroup
@@ -70,7 +67,6 @@ spec:
 
           {{- $resourceGroup := getComposedResource . "resourceGroup" }}
           {{- if $resourceGroup | dig "status" "atProvider" "id" "" }}
-          ---
 
           apiVersion: appdev.awginc.com/v1alpha1
           kind: XApplication
@@ -189,7 +185,6 @@ spec:
 
           {{- $internalDnsZone := getComposedResource . "internalDnsZone" }}
           {{- if $internalDnsZone | dig "status" "atProvider" "id" "" }}
-          ---
 
           apiVersion: appdev.awginc.com/v1alpha1
           kind: XApplication
@@ -239,7 +234,6 @@ spec:
 
           {{- $identity := getComposedResource . "identity" }}
           {{- if $identity | dig "status" "atProvider" "id" "" }}
-          ---
 
           apiVersion: appdev.awginc.com/v1alpha1
           kind: XApplication
@@ -417,7 +411,6 @@ spec:
           {{- if $externalDnsClusterRole }}
           {{- $externalDnsExternal := getComposedResource . "external-dns-external" }}
           {{- if $externalDnsExternal | dig "metadata" "annotations" "crossplane.io/external-name" "" }}  
-          ---
 
           apiVersion: kubernetes.crossplane.io/v1alpha2
           kind: Object
@@ -469,7 +462,6 @@ spec:
 
           {{- end }}
           {{- end }}
-          ---
 
           apiVersion: helm.crossplane.io/v1beta1
           kind: Release
@@ -527,7 +519,6 @@ spec:
           {{- if $externalDnsClusterRole }}
           {{- $externalDnsInternal := getComposedResource . "external-dns-internal" }}
           {{- if $externalDnsInternal | dig "metadata" "annotations" "crossplane.io/external-name" "" }}
-          ---
 
           apiVersion: kubernetes.crossplane.io/v1alpha2
           kind: Object
@@ -582,7 +573,6 @@ spec:
 
           {{- end }}
           {{- end }}
-          ---
 
           {{- $serviceAccountName := $name }}
           {{- if $xr | dig "spec" "serviceAccount" "name" "" }}
@@ -625,7 +615,6 @@ spec:
           
           {{- $serviceAccount := getComposedResource . $serviceAccountResourceName }}
           {{- if $serviceAccount | dig "metadata" "annotations" "crossplane.io/external-name" "" }}  
-          ---
 
           apiVersion: managedidentity.azure.upbound.io/v1beta1
           kind: FederatedIdentityCredential
@@ -648,7 +637,6 @@ spec:
           ---
 
           {{- end }}
-          ---
 
           # This policy applies to any Deployments that are members of the Application and ensures they have the appropriate workload identity label configured on their pods.
           apiVersion: kubernetes.crossplane.io/v1alpha2
@@ -701,7 +689,6 @@ spec:
 
           {{- end }}
           {{- end }}
-          ---
   - step: ready
     functionRef:
-      name: crossplane-contrib-function-auto-ready
+      name: upbound-function-auto-ready
