@@ -377,7 +377,7 @@ spec:
                 version: 1.16.1
               values:
                 logLevel: debug
-                txtOwnerId: {{ $appName }}
+                txtOwnerId: {{ $appName }}-external
                 namespaced: true
                 sources:
                 - service
@@ -486,7 +486,7 @@ spec:
                 version: 1.16.1
               values:
                 logLevel: debug
-                txtOwnerId: {{ $appName }}
+                txtOwnerId: {{ $appName }}-internal
                 namespaced: true
                 sources:
                 - service
