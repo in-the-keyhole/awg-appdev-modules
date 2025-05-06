@@ -25,13 +25,16 @@ spec:
         websecure:
           port: 443
       providers:
+        kubernetesCRD:
+          enabled: false
         kubernetesIngress:
+          enabled: true
           ingressClass: traefik-internal
           publishedService:
             enabled: true
         kubernetesGateway:
           enabled: true
-          labelSelector: "traefik-instance=traefik-internal"
+          labelselector: "traefik-instance=traefik-internal"
       ingressClass:
         enabled: true
         isDefaultClass: true
@@ -65,6 +68,8 @@ spec:
               type: Utilization
               averageUtilization: 75
       logs:
+        general:
+          level: DEBUG
         access:
           bufferingSize: 128
           enabled: true
