@@ -12,7 +12,7 @@ tasks:
   # logs into the ACR repository
   login-acr:
     cmds:
-    - az acr login -n {{ .REPOSITORY }}
+    - az acr login -n {{ .CONTAINERREGISTRY }}
 
   test-xpkg-example:
     requires:
