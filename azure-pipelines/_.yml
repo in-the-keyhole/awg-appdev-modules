@@ -44,10 +44,10 @@ stages:
       condition: always()
       artifact: dist
 
-- stage: deploy_sand
+- stage: deploy_labs
   condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
-  displayName: Deploy (sand)
+  displayName: Deploy (labs)
   variables:
-  - group: awg-appdev-mods-sand
+  - group: awg-appdev-modules-labs
   jobs:
   - template: deploy.yml
