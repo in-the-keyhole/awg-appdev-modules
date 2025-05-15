@@ -1,0 +1,32 @@
+jobs:
+- deployment: deploy
+  displayName: Deploy
+  pool:
+    vmImage: 'ubuntu-24.04'
+  strategy:
+    runOnce:
+      deploy:
+        steps:
+        - download: current
+          artifact: artifacts
+      
+        - task: gitversion/setup@0
+          inputs:
+            versionSpec: 5.x
+          
+        - task: gitversion/execute@0
+          inputs:
+            versionSpec: 5.x
+
+        - bash: sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d
+          displayName: Install Taskfile
+        - bash: curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+          displayName: Upgrade Azure CLI
+        - task: KubectlInstaller@0
+          displayName: Install kubectl
+        - task: KubeloginInstaller@0
+          displayName: Install kubelogin
+        - task: HelmInstaller@1
+          displayName: Install helm
+
+        - bash: task publish VERSION=$(GitVersion.SemVer) CONTAINERREGISTRY=$(ContainerRegistry)

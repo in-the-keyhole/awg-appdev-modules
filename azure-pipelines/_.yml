@@ -1,0 +1,53 @@
+trigger:
+  branches:
+    include:
+    - release
+    - develop
+  paths:
+    exclude:
+    - .gitignore
+
+stages:
+- stage: build
+  displayName: Build
+  jobs:
+  - job: build
+    displayName: Build
+    pool:
+      vmImage: 'ubuntu-24.04'
+    workspace:
+      clean: all
+    steps:
+    
+    - checkout: self
+      submodules: true
+      fetchTags: true
+      fetchDepth: 0
+      persistCredentials: true
+      
+    - task: gitversion/setup@0
+      inputs:
+        versionSpec: 5.x
+      
+    - task: gitversion/execute@0
+      inputs:
+        versionSpec: 5.x
+    
+    - pwsh: Write-Host "##vso[build.updatebuildnumber]$(GitVersion.FullSemVer)"
+      displayName: Set Build Number
+
+    - pwsh: task build
+      displayName: Build
+        
+    - publish: $(Build.SourcesDirectory)\dist
+      displayName: Publish Dist
+      condition: always()
+      artifact: dist
+
+- stage: deploy_sand
+  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+  displayName: Deploy (sand)
+  variables:
+  - group: awg-appdev-mods-sand
+  jobs:
+  - template: deploy.yml

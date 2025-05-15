@@ -5,7 +5,7 @@ vars:
   VERSION: 0.0.438
   XPKGS: [ 'awg-appdev' ]
   CHARTS: [ 'awg-appdev-boot', 'awg-appdev-init', 'awg-appdev-conf' ]
-  REPOSITORY: awgappdevlabs.azurecr.io
+  CONTAINERREGISTRY: awgappdevlabs.azurecr.io
 
 tasks:
 
@@ -97,7 +97,7 @@ tasks:
         - XPKG
         - VERSION
     cmds:
-      - crossplane xpkg push '{{ .REPOSITORY }}/xpkgs/{{ .XPKG }}:{{ .VERSION }}' -f '{{ .DISTDIR }}/{{ .XPKG }}-{{ .VERSION }}.xpkg'
+      - crossplane xpkg push '{{ .CONTAINERREGISTRY }}/xpkgs/{{ .XPKG }}:{{ .VERSION }}' -f '{{ .DISTDIR }}/{{ .XPKG }}-{{ .VERSION }}.xpkg'
 
   # publishes all the xpkgs
   publish-xpkgs:
@@ -145,7 +145,7 @@ tasks:
         - CHART
         - VERSION
     cmds:
-      - helm push '{{ .DISTDIR }}/{{ .CHART }}-{{ .VERSION }}.tgz' 'oci://{{ .REPOSITORY }}/charts'
+      - helm push '{{ .DISTDIR }}/{{ .CHART }}-{{ .VERSION }}.tgz' 'oci://{{ .CONTAINERREGISTRY }}/charts'
 
   # publishes all the charts
   publish-charts:
