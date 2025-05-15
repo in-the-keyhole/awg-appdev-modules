@@ -22,12 +22,17 @@ jobs:
           displayName: Install Taskfile
         - bash: curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
           displayName: Upgrade Azure CLI
-        - task: KubectlInstaller@0
-          displayName: Install kubectl
-        - task: KubeloginInstaller@0
-          displayName: Install kubelogin
         - task: HelmInstaller@1
           displayName: Install helm
+        - task: GoTool@0
+          displayName: Install Go
+          inputs:
+            version: '1.10'
+        - task: Go@0
+          displayName: Install Crane
+          inputs:
+            command: 'get'
+            arguments: 'github.com/google/go-containerregistry/cmd/gcrane@latest'
 
         - bash: task publish VERSION=$(GitVersion.SemVer) CONTAINERREGISTRY=$(ContainerRegistry)
           displayName: Publish Artifacts
